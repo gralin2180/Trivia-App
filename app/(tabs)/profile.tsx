@@ -1,26 +1,53 @@
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
-import { colors, fontSize } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { colors, fontSize, spacing } from '@/constants/theme';
 
 export default function ProfileScreen() {
+  const { user, signOut } = useAuth();
+
   return (
     <Screen>
-      <Text style={styles.title}>Profile & Settings</Text>
-      <Text style={styles.note}>Logout and settings come in Phase 6–7.</Text>
+      <View style={styles.card}>
+        <Text style={styles.label}>Signed in as</Text>
+        <Text style={styles.email}>{user?.email ?? 'Unknown user'}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <Button label="Sign Out" onPress={signOut} variant="secondary" />
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  label: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+  },
+  email: {
+    fontSize: fontSize.lg,
+    fontWeight: '600',
     color: colors.text,
   },
-  note: {
-    marginTop: 8,
+  section: {
+    gap: spacing.md,
+  },
+  sectionTitle: {
     fontSize: fontSize.md,
-    color: colors.textMuted,
+    fontWeight: '600',
+    color: colors.text,
   },
 });
