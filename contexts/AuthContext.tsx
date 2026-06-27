@@ -2,6 +2,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import { config } from '@/constants/config';
+import { signInWithSocialProvider, type SocialProvider } from '@/lib/auth/oauth';
 import { supabase } from '@/lib/supabase';
 
 type AuthResult = {
@@ -15,6 +16,7 @@ type AuthContextValue = {
   isConfigured: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
+  signInWithProvider: (provider: SocialProvider) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -76,6 +78,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const { error } = await supabase.auth.signUp({ email, password });
         return { error: error ? mapAuthError(error.message) : null };
+      },
+      signInWithProvider: async (provider) => {
+        if (!config.isSupabaseConfigured) {
+          return 'Supabase is not configured. Add your .env file and restart the app.';
+        }
+
+        return signInWithSocialProvider(provider);
       },
       signOut: async () => {
         await supabase.auth.signOut();

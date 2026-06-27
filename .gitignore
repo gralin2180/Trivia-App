@@ -40,3 +40,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local dev QR codes
+expo-qr.png
+expo-go-install-qr.png

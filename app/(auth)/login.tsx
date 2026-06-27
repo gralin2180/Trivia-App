@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 
+import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Screen } from '@/components/ui/Screen';
@@ -60,6 +61,8 @@ export default function LoginScreen() {
           ) : null}
 
           <View style={styles.form}>
+            <SocialAuthButtons onError={setError} />
+
             <Input
               label="Email"
               value={email}
@@ -79,8 +82,9 @@ export default function LoginScreen() {
             />
             {error ? <Text style={styles.error}>{error}</Text> : null}
             <Button
-              label={isSubmitting ? 'Signing in...' : 'Sign In'}
+              label={isSubmitting ? 'Signing in...' : 'Sign in with email'}
               onPress={handleLogin}
+              variant="secondary"
             />
           </View>
 
