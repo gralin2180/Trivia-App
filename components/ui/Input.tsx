@@ -23,28 +23,53 @@ export function Input({ label, error, style, ...props }: InputProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
+
   label: {
     fontSize: fontSize.sm,
-    fontWeight: '600',
+    fontWeight: "700",
     color: colors.text,
+    marginLeft: 4,
+    letterSpacing: 0.3,
   },
+
   input: {
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
+
+    backgroundColor: colors.surface,
+
+    borderRadius: 18,
+
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 16,
+
     fontSize: fontSize.md,
     color: colors.text,
-    backgroundColor: colors.surface,
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+
+    elevation: 3,
   },
+
   inputError: {
     borderColor: colors.error,
   },
+
   error: {
-    fontSize: fontSize.sm,
+    marginTop: 2,
+    marginLeft: 4,
+
     color: colors.error,
+
+    fontSize: fontSize.sm,
+    fontWeight: "600",
   },
 });
