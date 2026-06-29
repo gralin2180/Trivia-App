@@ -29,27 +29,50 @@ export function Button({ label, onPress, variant = 'primary', style }: ButtonPro
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.lg,
-    borderRadius: 12,
-    alignItems: 'center',
+    borderRadius: 18,
+
+    alignItems: "center",
+    justifyContent: "center",
+
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+
+    elevation: 8,
   },
+
   primary: {
     backgroundColor: colors.primary,
   },
+
   secondary: {
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
+
   pressed: {
-    opacity: 0.85,
+    opacity: 0.92,
+    transform: [
+      {
+        scale: 0.98,
+      },
+    ],
   },
+
   label: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: fontSize.md,
-    fontWeight: '600',
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
+
   secondaryLabel: {
     color: colors.text,
   },
