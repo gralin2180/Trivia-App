@@ -13,6 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { colors, fontSize, spacing } from '@/constants/theme';
 import { useDecks } from '@/hooks/useDecks';
 import { useProgress } from '@/hooks/useProgress';
+import { HeroCard } from "@/components/home/HeroCard";
+import { ContinueLearning } from "@/components/home/ContinueLearning";
+import { DailyQuest } from "@/components/home/DailyQuest";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -41,12 +44,19 @@ export default function HomeScreen() {
   return (
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.hero}>
-          <Text style={styles.greeting}>Welcome back, {displayName}</Text>
-          <Text style={styles.subtitle}>Learn any topic — like Duolingo, but for trivia.</Text>
-        </View>
+        <HeroCard
+          name={displayName}
+          streak={progress.streak}
+        />
+
+        <ContinueLearning
+          topic="Poker"
+        progress={80}
+        />
 
         <TopicSearch />
+
+        <DailyQuest />
 
         <OfflineBanner visible={fromCache} />
 
