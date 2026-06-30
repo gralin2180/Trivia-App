@@ -82,16 +82,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   section: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
+
   categoryTitle: {
-    fontSize: fontSize.md,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    fontSize: fontSize.lg,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
+
   deckList: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
 });

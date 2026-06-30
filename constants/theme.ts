@@ -44,11 +44,11 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 10,
-  md: 18,
-  lg: 24,
-  xl: 30,
-  pill: 999,
+  sm: 8,
+  md: 14,
+  lg: 20,
+  xl: 28,
+  full: 999,
 };
 
 export const fontSize = {
