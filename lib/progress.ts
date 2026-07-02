@@ -1,3 +1,5 @@
+import { game } from '@/constants/theme';
+import { calculateXp, getLevelInfo, type LevelInfo } from '@/lib/gamification';
 import { supabase } from '@/lib/supabase';
 
 export type DeckProgressItem = {
@@ -23,6 +25,11 @@ export type UserProgress = {
   averageQuizPercent: number;
   deckProgress: DeckProgressItem[];
   recentQuizzes: RecentQuiz[];
+  xp: number;
+  levelInfo: LevelInfo;
+  dailyCardsStudied: number;
+  dailyGoal: number;
+  continueDeck: DeckProgressItem | null;
 };
 
 function formatDay(date: Date): string {
@@ -146,14 +153,40 @@ export async function fetchUserProgress(userId: string): Promise<{
     completedAt: quiz.completed_at as string,
   }));
 
+  const todayStr = formatDay(new Date());
+  const dailyCardsStudied = (reviewsResult.data ?? []).filter(
+    (row) => (row.reviewed_at as string).slice(0, 10) === todayStr,
+  ).length;
+
+  const totalQuizScore = allQuizzes.reduce(
+    (sum, quiz) => sum + (quiz.score as number),
+    0,
+  );
+  const cardsStudied = reviewsResult.data?.length ?? 0;
+  const xp = calculateXp(cardsStudied, totalQuizScore);
+  const levelInfo = getLevelInfo(xp);
+
+  const continueDeck =
+    deckProgress
+      .filter((d) => d.percent > 0 && d.percent < 100)
+      .sort((a, b) => b.percent - a.percent)[0] ??
+    deckProgress.find((d) => d.percent === 0) ??
+    deckProgress[0] ??
+    null;
+
   return {
     data: {
       streak: calculateStreak(activityDates),
-      cardsStudied: reviewsResult.data?.length ?? 0,
+      cardsStudied,
       quizzesTaken,
       averageQuizPercent,
       deckProgress,
       recentQuizzes,
+      xp,
+      levelInfo,
+      dailyCardsStudied,
+      dailyGoal: game.dailyGoal,
+      continueDeck,
     },
     error: null,
   };

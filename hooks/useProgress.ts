@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { game } from '@/constants/theme';
 import { fetchUserProgress, type UserProgress } from '@/lib/progress';
+import { getLevelInfo } from '@/lib/gamification';
 
 const emptyProgress: UserProgress = {
   streak: 0,
@@ -9,6 +11,11 @@ const emptyProgress: UserProgress = {
   averageQuizPercent: 0,
   deckProgress: [],
   recentQuizzes: [],
+  xp: 0,
+  levelInfo: getLevelInfo(0),
+  dailyCardsStudied: 0,
+  dailyGoal: game.dailyGoal,
+  continueDeck: null,
 };
 
 export function useProgress(userId: string | undefined) {

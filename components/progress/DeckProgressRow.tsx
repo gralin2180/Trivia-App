@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
 import type { DeckProgressItem } from '@/lib/progress';
 
 type DeckProgressRowProps = {
@@ -11,15 +12,13 @@ export function DeckProgressRow({ item }: DeckProgressRowProps) {
   return (
     <View style={styles.row}>
       <View style={styles.header}>
-        <Text style={styles.title}>{item.deckTitle}</Text>
-        <Text style={styles.meta}>
-          {item.cardsStudied}/{item.totalCards} cards
-        </Text>
+        <Text style={styles.title}>🃏 {item.deckTitle}</Text>
+        <Text style={styles.percent}>{item.percent}%</Text>
       </View>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${item.percent}%` }]} />
-      </View>
-      <Text style={styles.percent}>{item.percent}% studied</Text>
+      <ProgressBar progress={item.percent / 100} height={10} gradient={gradients.primary} />
+      <Text style={styles.meta}>
+        {item.cardsStudied}/{item.totalCards} cards studied
+      </Text>
     </View>
   );
 }
@@ -27,8 +26,8 @@ export function DeckProgressRow({ item }: DeckProgressRowProps) {
 const styles = StyleSheet.create({
   row: {
     backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: radius.md,
+    borderWidth: 2,
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
@@ -42,26 +41,17 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
+  },
+  percent: {
+    fontSize: fontSize.md,
+    fontWeight: '800',
+    color: colors.primary,
   },
   meta: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
-  },
-  track: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-  fill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-  },
-  percent: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
+    fontWeight: '600',
   },
 });

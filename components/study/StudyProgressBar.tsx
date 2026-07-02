@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from '@/constants/theme';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { colors, fontSize, gradients, spacing } from '@/constants/theme';
 
 type StudyProgressBarProps = {
   label: string;
@@ -12,10 +13,11 @@ export function StudyProgressBar({ label }: StudyProgressBarProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.track}>
-        <View style={[styles.fill, { width: `${Math.min(progress * 100, 100)}%` }]} />
+      <View style={styles.header}>
+        <Text style={styles.title}>Progress</Text>
+        <Text style={styles.label}>{label}</Text>
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <ProgressBar progress={progress} height={14} gradient={gradients.primary} />
     </View>
   );
 }
@@ -24,21 +26,21 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.xs,
   },
-  track: {
-    height: 8,
-    backgroundColor: colors.border,
-    borderRadius: 999,
-    overflow: 'hidden',
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  fill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: 999,
+  title: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   label: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontWeight: '600',
-    textAlign: 'right',
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: '800',
   },
 });

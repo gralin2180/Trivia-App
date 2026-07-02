@@ -1,8 +1,9 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from 'react-native';
 
-import { GameCard } from "@/components/ui/GameCard";
-import { Button } from "@/components/ui/Button";
-import { colors, fontSize, spacing } from "@/constants/theme";
+import { Button } from '@/components/ui/Button';
+import { GameCard } from '@/components/ui/GameCard';
+import { ProgressBar } from '@/components/ui/ProgressBar';
+import { colors, fontSize, spacing } from '@/constants/theme';
 
 type Props = {
   topic: string;
@@ -10,76 +11,56 @@ type Props = {
   onPress?: () => void;
 };
 
-export function ContinueLearning({
-  topic,
-  progress,
-  onPress,
-}: Props) {
+export function ContinueLearning({ topic, progress, onPress }: Props) {
   return (
     <GameCard>
-
-      <Text style={styles.badge}>
-        Continue Learning
-      </Text>
-
-      <Text style={styles.title}>
-        {topic}
-      </Text>
-
-      <Text style={styles.subtitle}>
-        {progress}% completed
-      </Text>
-
-      <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            {
-              width: `${progress}%`,
-            },
-          ]}
-        />
+      <View style={styles.header}>
+        <Text style={styles.badge}>▶ CONTINUE</Text>
+        <Text style={styles.percent}>{progress}%</Text>
       </View>
 
-      <View style={{ marginTop: spacing.lg }}>
-        <Button
-            label="Resume"
-            onPress={onPress ?? (() => {})}
-        />
-      </View>
+      <Text style={styles.title}>{topic}</Text>
+      <Text style={styles.subtitle}>Pick up where you left off!</Text>
 
+      <ProgressBar progress={progress / 100} height={12} />
+
+      <View style={styles.buttonWrap}>
+        <Button label="Resume" onPress={onPress ?? (() => {})} icon="🚀" />
+      </View>
     </GameCard>
   );
 }
 
 const styles = StyleSheet.create({
-  badge: {
-    color: colors.primary,
-    fontWeight: "700",
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: spacing.xs,
   },
-
-  title: {
-    color: colors.text,
-    fontWeight: "800",
+  badge: {
+    color: colors.primary,
+    fontWeight: '800',
+    fontSize: fontSize.sm,
+    letterSpacing: 0.5,
+  },
+  percent: {
+    color: colors.primary,
+    fontWeight: '800',
     fontSize: fontSize.lg,
   },
-
+  title: {
+    color: colors.text,
+    fontWeight: '800',
+    fontSize: fontSize.lg,
+  },
   subtitle: {
     color: colors.textMuted,
     marginTop: spacing.xs,
     marginBottom: spacing.md,
+    fontSize: fontSize.sm,
   },
-
-  track: {
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-
-  fill: {
-    height: "100%",
-    backgroundColor: colors.primary,
+  buttonWrap: {
+    marginTop: spacing.lg,
   },
 });

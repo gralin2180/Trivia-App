@@ -1,91 +1,113 @@
-import { StyleSheet, Text, View } from "react-native";
-import { colors, fontSize, radius, spacing } from "@/constants/theme";
-import { GameCard } from "@/components/ui/GameCard";
+import { LinearGradient } from 'expo-linear-gradient';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { GameCard } from '@/components/ui/GameCard';
+import { XPBar } from '@/components/ui/XPBar';
+import { colors, fontSize, gradients, spacing } from '@/constants/theme';
+import type { LevelInfo } from '@/lib/gamification';
 
 type HeroCardProps = {
   name: string;
   streak: number;
+  levelInfo: LevelInfo;
 };
 
-export function HeroCard({ name, streak }: HeroCardProps) {
+export function HeroCard({ name, streak, levelInfo }: HeroCardProps) {
   return (
-    <GameCard>
-      <View style={styles.header}>
-        <Text style={styles.streak}>🔥 {streak} Day Streak</Text>
-
-        <Text style={styles.title}>
-          Welcome back,
-        </Text>
-
-        <Text style={styles.name}>
-          {name}
-        </Text>
-
-        <Text style={styles.subtitle}>
-          Ready to learn something awesome today?
-        </Text>
+    <GameCard variant="highlight">
+      <View style={styles.topRow}>
+        <View style={styles.streakBadge}>
+          <LinearGradient
+            colors={[...gradients.streak]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.streakGradient}
+          >
+            <Text style={styles.streakText}>🔥 {streak} day streak</Text>
+          </LinearGradient>
+        </View>
+        <View style={styles.levelBadge}>
+          <Text style={styles.levelText}>Lv. {levelInfo.level}</Text>
+        </View>
       </View>
 
-      <View style={styles.xpContainer}>
-        <View style={styles.xpFill} />
-      </View>
+      <Text style={styles.greeting}>Hey, {name}! 👋</Text>
+      <Text style={styles.subtitle}>Ready to level up your brain?</Text>
 
-      <Text style={styles.xpText}>
-        Level 3 • 420 / 600 XP
-      </Text>
+      <View style={styles.xpSection}>
+        <View style={styles.xpHeader}>
+          <Text style={styles.xpLabel}>⭐ XP Progress</Text>
+          <Text style={styles.xpValue}>
+            {levelInfo.xpInLevel} / {levelInfo.xpToNextLevel}
+          </Text>
+        </View>
+        <XPBar progress={levelInfo.progress} height={14} />
+      </View>
     </GameCard>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    gap: spacing.xs,
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
-
-  streak: {
-    color: colors.warning,
-    fontWeight: "700",
+  streakBadge: {
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+  streakGradient: {
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+  },
+  streakText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
     fontSize: fontSize.sm,
   },
-
-  title: {
-    color: colors.textMuted,
-    fontSize: fontSize.md,
+  levelBadge: {
+    backgroundColor: colors.surfaceHighlight,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: 999,
+    borderWidth: 2,
+    borderColor: colors.xp,
   },
-
-  name: {
+  levelText: {
+    color: colors.xp,
+    fontWeight: '800',
+    fontSize: fontSize.sm,
+  },
+  greeting: {
     color: colors.text,
-    fontSize: 24,
-    fontWeight: "800",
+    fontSize: fontSize.xl,
+    fontWeight: '800',
   },
-
   subtitle: {
     color: colors.textMuted,
+    fontSize: fontSize.md,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  xpSection: {
+    gap: spacing.xs,
+  },
+  xpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  xpLabel: {
+    color: colors.xp,
+    fontWeight: '700',
     fontSize: fontSize.sm,
   },
-
-  badge: {
-    fontSize: fontSize.xs,
-  },
-
-  xpContainer: {
-    marginTop: spacing.md,
-    height: 10,
-    borderRadius: radius.pill,
-    backgroundColor: colors.border,
-    overflow: "hidden",
-  },
-
-  xpFill: {
-    width: "70%",
-    height: "100%",
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-  },
-
-  xpText: {
-    marginTop: spacing.xs,
+  xpValue: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
+    fontWeight: '600',
   },
 });

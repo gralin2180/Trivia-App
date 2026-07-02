@@ -1,6 +1,7 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
 
 type FlashcardProps = {
   front: string;
@@ -12,11 +13,20 @@ type FlashcardProps = {
 export function Flashcard({ front, back, isFlipped, onFlip }: FlashcardProps) {
   return (
     <Pressable onPress={onFlip} style={({ pressed }) => [styles.wrapper, pressed && styles.pressed]}>
-      <View style={styles.card}>
-        <Text style={styles.label}>{isFlipped ? 'Answer' : 'Question'}</Text>
+      <LinearGradient
+        colors={isFlipped ? ['#1A2840', '#243049'] : [...gradients.purple]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.card}
+      >
+        <View style={styles.labelBadge}>
+          <Text style={styles.label}>{isFlipped ? '💡 Answer' : '❓ Question'}</Text>
+        </View>
         <Text style={styles.text}>{isFlipped ? back : front}</Text>
-        <Text style={styles.hint}>{isFlipped ? 'Tap to see question' : 'Tap to reveal answer'}</Text>
-      </View>
+        <Text style={styles.hint}>
+          {isFlipped ? 'Tap to flip back' : 'Tap to reveal answer'}
+        </Text>
+      </LinearGradient>
     </Pressable>
   );
 }
@@ -26,40 +36,46 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   pressed: {
-    opacity: 0.95,
+    transform: [{ scale: 0.98 }],
   },
   card: {
-    minHeight: 280,
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
+    minHeight: 300,
+    borderRadius: radius.xl,
+    borderWidth: 2,
+    borderColor: colors.borderLight,
     padding: spacing.lg,
     justifyContent: 'center',
     gap: spacing.md,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  labelBadge: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
   },
   label: {
     fontSize: fontSize.sm,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: 0.5,
   },
   text: {
-    fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontSize: fontSize.xl,
+    fontWeight: '700',
     color: colors.text,
-    lineHeight: 30,
+    lineHeight: 34,
     textAlign: 'center',
   },
   hint: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
     textAlign: 'center',
+    marginTop: spacing.sm,
   },
 });

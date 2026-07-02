@@ -4,6 +4,7 @@ import { StatCard } from '@/components/home/StatCard';
 import { DeckProgressRow } from '@/components/progress/DeckProgressRow';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
+import { GameCard } from '@/components/ui/GameCard';
 import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fontSize, spacing } from '@/constants/theme';
@@ -40,13 +41,18 @@ export default function ProgressScreen() {
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.statsRow}>
-          <StatCard label="Day streak" value={progress.streak} />
-          <StatCard label="Cards studied" value={progress.cardsStudied} />
-          <StatCard label="Quiz avg" value={`${progress.averageQuizPercent}%`} />
+          <StatCard label="Day streak" value={progress.streak} icon="🔥" accent={colors.streak} />
+          <StatCard label="Cards studied" value={progress.cardsStudied} icon="🃏" accent={colors.secondary} />
+          <StatCard label="Quiz avg" value={`${progress.averageQuizPercent}%`} icon="🏆" accent={colors.xp} />
         </View>
 
+        <GameCard variant="highlight">
+          <Text style={styles.levelTitle}>⭐ Level {progress.levelInfo.level}</Text>
+          <Text style={styles.xpTotal}>{progress.xp} total XP earned</Text>
+        </GameCard>
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Deck progress</Text>
+          <Text style={styles.sectionTitle}>📈 Deck progress</Text>
           {progress.deckProgress.length === 0 ? (
             <EmptyState
               title="No progress yet"
@@ -62,22 +68,30 @@ export default function ProgressScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent quizzes</Text>
+          <Text style={styles.sectionTitle}>🎯 Recent quizzes</Text>
           {progress.recentQuizzes.length === 0 ? (
             <Text style={styles.emptyText}>Complete a quiz to see scores here.</Text>
           ) : (
             <View style={styles.list}>
-              {progress.recentQuizzes.map((quiz) => (
-                <View key={quiz.id} style={styles.quizRow}>
-                  <View style={styles.quizInfo}>
-                    <Text style={styles.quizTitle}>{quiz.deckTitle}</Text>
-                    <Text style={styles.quizDate}>{formatDate(quiz.completedAt)}</Text>
+              {progress.recentQuizzes.map((quiz) => {
+                const pct = quiz.totalQuestions > 0
+                  ? Math.round((quiz.score / quiz.totalQuestions) * 100)
+                  : 0;
+                return (
+                  <View key={quiz.id} style={styles.quizRow}>
+                    <View style={styles.quizInfo}>
+                      <Text style={styles.quizTitle}>{quiz.deckTitle}</Text>
+                      <Text style={styles.quizDate}>{formatDate(quiz.completedAt)}</Text>
+                    </View>
+                    <View style={styles.quizScoreWrap}>
+                      <Text style={styles.quizScore}>{quiz.score}/{quiz.totalQuestions}</Text>
+                      <Text style={[styles.quizPct, pct >= 70 ? styles.quizPctGood : styles.quizPctOk]}>
+                        {pct}%
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.quizScore}>
-                    {quiz.score}/{quiz.totalQuestions}
-                  </Text>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
         </View>
@@ -103,12 +117,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
   },
+  levelTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+    color: colors.xp,
+  },
+  xpTotal: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    fontWeight: '600',
+    marginTop: spacing.xs,
+  },
   section: {
     gap: spacing.sm,
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.text,
   },
   list: {
@@ -124,7 +149,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
     padding: spacing.md,
     gap: spacing.sm,
@@ -135,16 +160,30 @@ const styles = StyleSheet.create({
   },
   quizTitle: {
     fontSize: fontSize.md,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
   },
   quizDate: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
   },
+  quizScoreWrap: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
   quizScore: {
     fontSize: fontSize.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.primary,
+  },
+  quizPct: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  quizPctGood: {
+    color: colors.success,
+  },
+  quizPctOk: {
+    color: colors.warning,
   },
 });

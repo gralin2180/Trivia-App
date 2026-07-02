@@ -1,55 +1,51 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { XPBar } from "@/components/ui/XPBar";
-import { colors, fontSize, radius, spacing } from "@/constants/theme";
-import type { DeckWithCardCount } from "@/types/database";
+import { XPBar } from '@/components/ui/XPBar';
+import { colors, fontSize, radius, shadows, spacing } from '@/constants/theme';
+import { getDifficultyBadge } from '@/lib/gamification';
+import type { DeckWithCardCount } from '@/types/database';
 
 type DeckCardProps = {
   deck: DeckWithCardCount;
+  progress?: number;
   onPress: () => void;
 };
 
 function getEmoji(title: string) {
   const t = title.toLowerCase();
 
-  if (t.includes("doctor") || t.includes("medical")) return "🩺";
-  if (t.includes("poker")) return "🎰";
-  if (t.includes("history")) return "📜";
-  if (t.includes("space")) return "🚀";
-  if (t.includes("science")) return "🧪";
-  if (t.includes("code") || t.includes("program")) return "💻";
-  if (t.includes("music")) return "🎵";
-  if (t.includes("cat")) return "🐱";
-  if (t.includes("dog")) return "🐶";
+  if (t.includes('doctor') || t.includes('medical')) return '🩺';
+  if (t.includes('poker')) return '🎰';
+  if (t.includes('history')) return '📜';
+  if (t.includes('space')) return '🚀';
+  if (t.includes('science')) return '🧪';
+  if (t.includes('code') || t.includes('program')) return '💻';
+  if (t.includes('music')) return '🎵';
+  if (t.includes('cat')) return '🐱';
+  if (t.includes('dog')) return '🐶';
 
-  return "🧠";
+  return '🧠';
 }
 
-export function DeckCard({ deck, onPress }: DeckCardProps) {
-  const progress = 0.65;
+export function DeckCard({ deck, progress = 0, onPress }: DeckCardProps) {
+  const percent = Math.round(progress * 100);
+  const badge = getDifficultyBadge(percent);
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.top}>
-
         <View style={styles.left}>
-          <Text style={styles.emoji}>
-            {getEmoji(deck.title)}
-          </Text>
+          <View style={styles.emojiWrap}>
+            <Text style={styles.emoji}>{getEmoji(deck.title)}</Text>
+          </View>
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>
-              {deck.title}
-            </Text>
-
+            <Text style={styles.title}>{deck.title}</Text>
             {deck.description ? (
-              <Text style={styles.description}>
+              <Text style={styles.description} numberOfLines={2}>
                 {deck.description}
               </Text>
             ) : null}
@@ -57,11 +53,8 @@ export function DeckCard({ deck, onPress }: DeckCardProps) {
         </View>
 
         <View style={styles.badge}>
-          <Text style={styles.badgeText}>
-            Beginner
-          </Text>
+          <Text style={styles.badgeText}>{badge}</Text>
         </View>
-
       </View>
 
       <View style={styles.progress}>
@@ -69,94 +62,91 @@ export function DeckCard({ deck, onPress }: DeckCardProps) {
       </View>
 
       <View style={styles.bottom}>
-        <Text style={styles.cards}>
-          {deck.card_count} cards
-        </Text>
-
-        <Text style={styles.continue}>
-          ▶ Continue
-        </Text>
+        <Text style={styles.cards}>🃏 {deck.card_count} cards</Text>
+        <Text style={styles.continue}>Play ▶</Text>
       </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.border,
+    borderBottomWidth: 4,
+    borderBottomColor: colors.borderLight,
     padding: spacing.md,
     gap: spacing.md,
+    ...shadows.card,
   },
-
   pressed: {
-    opacity: 0.92,
-    transform: [{ scale: 0.98 }],
+    transform: [{ translateY: 2 }],
+    borderBottomWidth: 2,
+    opacity: 0.95,
   },
-
   top: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-
   left: {
-    flexDirection: "row",
+    flexDirection: 'row',
     flex: 1,
     gap: spacing.md,
   },
-
-  emoji: {
-    fontSize: 34,
+  emojiWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
+  emoji: {
+    fontSize: 28,
+  },
   title: {
     color: colors.text,
     fontSize: fontSize.lg,
-    fontWeight: "800",
+    fontWeight: '800',
   },
-
   description: {
     color: colors.textMuted,
     marginTop: 4,
     lineHeight: 20,
+    fontSize: fontSize.sm,
   },
-
   badge: {
-    backgroundColor: colors.surfaceLight,
+    backgroundColor: colors.surfaceHighlight,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.secondary + '66',
   },
-
   badgeText: {
-    color: colors.primary,
-    fontWeight: "700",
+    color: colors.secondary,
+    fontWeight: '800',
     fontSize: fontSize.xs,
   },
-
   progress: {
     marginTop: 2,
   },
-
   bottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-
   cards: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
+    fontWeight: '600',
   },
-
   continue: {
     color: colors.primary,
-    fontWeight: "700",
+    fontWeight: '800',
     fontSize: fontSize.sm,
   },
-
 });

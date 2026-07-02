@@ -13,9 +13,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { colors, fontSize, spacing } from '@/constants/theme';
 import { useDecks } from '@/hooks/useDecks';
 import { useProgress } from '@/hooks/useProgress';
-import { HeroCard } from "@/components/home/HeroCard";
-import { ContinueLearning } from "@/components/home/ContinueLearning";
-import { DailyQuest } from "@/components/home/DailyQuest";
+import { HeroCard } from '@/components/home/HeroCard';
+import { ContinueLearning } from '@/components/home/ContinueLearning';
+import { DailyQuest } from '@/components/home/DailyQuest';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -23,7 +23,12 @@ export default function HomeScreen() {
   const { decks, isLoading, error, fromCache, reload } = useDecks();
   const { progress } = useProgress(user?.id);
 
-  const displayName = user?.email?.split('@')[0] ?? 'there';
+  const displayName = user?.email?.split('@')[0] ?? 'Player';
+
+  function getDeckProgress(deckId: string) {
+    const item = progress.deckProgress.find((d) => d.deckId === deckId);
+    return item ? item.percent / 100 : 0;
+  }
 
   if (isLoading) {
     return (
@@ -47,37 +52,41 @@ export default function HomeScreen() {
         <HeroCard
           name={displayName}
           streak={progress.streak}
+          levelInfo={progress.levelInfo}
         />
 
-        <ContinueLearning
-          topic="Poker"
-        progress={80}
-        />
+        {progress.continueDeck ? (
+          <ContinueLearning
+            topic={progress.continueDeck.deckTitle}
+            progress={progress.continueDeck.percent}
+            onPress={() => router.push(`/deck/${progress.continueDeck!.deckId}`)}
+          />
+        ) : null}
+
+        <DailyQuest cardsStudied={progress.dailyCardsStudied} goal={progress.dailyGoal} />
 
         <TopicSearch />
-
-        <DailyQuest />
 
         <OfflineBanner visible={fromCache} />
 
         <View style={styles.statsRow}>
-          <StatCard label="Decks" value={decks.length} />
-          <StatCard label="Streak" value={progress.streak} />
-          <StatCard label="Studied" value={progress.cardsStudied} />
+          <StatCard label="Decks" value={decks.length} icon="🃏" accent={colors.secondary} />
+          <StatCard label="Streak" value={progress.streak} icon="🔥" accent={colors.streak} />
+          <StatCard label="XP" value={progress.xp} icon="⭐" accent={colors.xp} />
         </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Quick start</Text>
+            <Text style={styles.sectionTitle}>⚡ Quick start</Text>
             <Link href="/(tabs)/decks" asChild>
-              <Button label="All decks" onPress={() => {}} variant="secondary" style={styles.smallButton} />
+              <Button label="All" onPress={() => {}} variant="secondary" style={styles.smallButton} />
             </Link>
           </View>
 
           {decks.length === 0 ? (
             <EmptyState
               title="No decks yet"
-              message="Run the SQL in supabase/schema.sql to add sample decks."
+              message="Generate your first deck with a topic above!"
               actionLabel="Retry"
               onAction={reload}
             />
@@ -87,6 +96,7 @@ export default function HomeScreen() {
                 <DeckCard
                   key={deck.id}
                   deck={deck}
+                  progress={getDeckProgress(deck.id)}
                   onPress={() => router.push(`/deck/${deck.id}`)}
                 />
               ))}
@@ -111,18 +121,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     paddingBottom: spacing.xl,
   },
-  hero: {
-    gap: spacing.xs,
-  },
-  greeting: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textMuted,
-  },
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -137,7 +135,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.text,
   },
   smallButton: {
