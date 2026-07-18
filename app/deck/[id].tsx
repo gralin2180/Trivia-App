@@ -81,6 +81,28 @@ export default function DeckDetailScreen() {
             variant="purple"
             icon="⚡"
           />
+          <Button
+            label="Practice (no hearts)"
+            onPress={() =>
+              router.push({
+                pathname: '/quiz/[deckId]',
+                params: { deckId: deck.id, mode: 'practice' },
+              })
+            }
+            variant="secondary"
+            icon="🛡️"
+          />
+          <Button
+            label="Timed speed round"
+            onPress={() =>
+              router.push({
+                pathname: '/quiz/[deckId]',
+                params: { deckId: deck.id, mode: 'timed' },
+              })
+            }
+            variant="secondary"
+            icon="⏱️"
+          />
         </View>
       </ScrollView>
     </Screen>
@@ -90,15 +112,17 @@ export default function DeckDetailScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 0,
+    paddingTop: 0,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
-    padding: spacing.md,
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: spacing.xxl,
   },
   hero: {
     backgroundColor: colors.surface,

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { Platform } from 'react-native';
 
 import { colors, fontSize } from '@/constants/theme';
 
@@ -16,29 +17,41 @@ export default function TabsLayout() {
           fontWeight: '800',
           fontSize: fontSize.lg,
         },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 2,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
+        headerShadowVisible: false,
+        // Let React Navigation own the home-indicator inset on native.
+        // On web, add enough padding so labels aren't clipped by browser chrome.
+        tabBarStyle: Platform.select({
+          web: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 2,
+            height: 72,
+            paddingTop: 8,
+            paddingBottom: 14,
+          },
+          default: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 2,
+            paddingTop: 6,
+          },
+        }),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontWeight: '700',
           fontSize: 11,
+          marginBottom: Platform.OS === 'web' ? 4 : 0,
         },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          headerTitle: '🎮 Play',
+          title: 'Learn',
+          headerTitle: '📚 Learn',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+            <Ionicons name="book" size={size} color={color} />
           ),
         }}
       />
@@ -53,10 +66,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="practice"
+        options={{
+          title: 'Practice',
+          headerTitle: '⚔️ Practice',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="flash" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progress',
-          headerTitle: '📊 Progress',
+          title: 'Stats',
+          headerTitle: '📊 Stats',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="trophy" size={size} color={color} />
           ),

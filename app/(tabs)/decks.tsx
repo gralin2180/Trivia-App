@@ -81,15 +81,17 @@ export default function DecksScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 0,
+    paddingTop: 0,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
-    padding: spacing.md,
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: 100,
   },
   section: {
     gap: spacing.md,

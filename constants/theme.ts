@@ -105,9 +105,13 @@ export const gradients = {
 
 export const game = {
   dailyGoal: 10,
+  dailyXpGoal: 50,
   xpPerCard: 10,
   xpPerQuizCorrect: 15,
   xpPerDailyQuest: 150,
   xpPerLevel: 600,
   maxHearts: 3,
+  timedSecondsPerQuestion: 12,
+  timedXpBonusPerCorrect: 5,
 };
+

@@ -1,5 +1,15 @@
 import { game } from '@/constants/theme';
-import { calculateXp, getLevelInfo, type LevelInfo } from '@/lib/gamification';
+import {
+  buildAchievements,
+  buildStreakCalendar,
+  buildWeakDecks,
+  calculateXp,
+  getLevelInfo,
+  type Achievement,
+  type LevelInfo,
+  type StreakDay,
+  type WeakDeck,
+} from '@/lib/gamification';
 import { supabase } from '@/lib/supabase';
 
 export type DeckProgressItem = {
@@ -12,6 +22,7 @@ export type DeckProgressItem = {
 
 export type RecentQuiz = {
   id: string;
+  deckId: string;
   deckTitle: string;
   score: number;
   totalQuestions: number;
@@ -29,7 +40,13 @@ export type UserProgress = {
   levelInfo: LevelInfo;
   dailyCardsStudied: number;
   dailyGoal: number;
+  dailyXp: number;
+  dailyXpGoal: number;
   continueDeck: DeckProgressItem | null;
+  streakCalendar: StreakDay[];
+  achievements: Achievement[];
+  weakDecks: WeakDeck[];
+  hasPerfectQuiz: boolean;
 };
 
 function formatDay(date: Date): string {
@@ -71,23 +88,23 @@ export async function fetchUserProgress(userId: string): Promise<{
 }> {
   const [reviewsResult, sessionsResult, quizzesResult, quizCountResult, decksResult] =
     await Promise.all([
-    supabase
-      .from('card_reviews')
-      .select('reviewed_at, card_id, cards!inner(deck_id)')
-      .eq('user_id', userId),
-    supabase.from('study_sessions').select('started_at').eq('user_id', userId),
-    supabase
-      .from('quiz_attempts')
-      .select('id, score, total_questions, completed_at, decks(title)')
-      .eq('user_id', userId)
-      .order('completed_at', { ascending: false })
-      .limit(5),
-    supabase
-      .from('quiz_attempts')
-      .select('score, total_questions')
-      .eq('user_id', userId),
-    supabase.from('decks').select('id, title, cards(count)'),
-  ]);
+      supabase
+        .from('card_reviews')
+        .select('reviewed_at, card_id, cards!inner(deck_id)')
+        .eq('user_id', userId),
+      supabase.from('study_sessions').select('started_at').eq('user_id', userId),
+      supabase
+        .from('quiz_attempts')
+        .select('id, score, total_questions, completed_at, deck_id, decks(title)')
+        .eq('user_id', userId)
+        .order('completed_at', { ascending: false })
+        .limit(20),
+      supabase
+        .from('quiz_attempts')
+        .select('score, total_questions, completed_at, deck_id, decks(title)')
+        .eq('user_id', userId),
+      supabase.from('decks').select('id, title, cards(count)'),
+    ]);
 
   if (reviewsResult.error) return { data: null, error: reviewsResult.error.message };
   if (sessionsResult.error) return { data: null, error: sessionsResult.error.message };
@@ -145,8 +162,9 @@ export async function fetchUserProgress(userId: string): Promise<{
         )
       : 0;
 
-  const recentQuizzes: RecentQuiz[] = (quizzesResult.data ?? []).map((quiz) => ({
+  const recentQuizzes: RecentQuiz[] = (quizzesResult.data ?? []).slice(0, 5).map((quiz) => ({
     id: quiz.id as string,
+    deckId: (quiz.deck_id as string) ?? '',
     deckTitle: (quiz.decks as unknown as { title: string } | null)?.title ?? 'Unknown deck',
     score: quiz.score as number,
     totalQuestions: quiz.total_questions as number,
@@ -154,9 +172,17 @@ export async function fetchUserProgress(userId: string): Promise<{
   }));
 
   const todayStr = formatDay(new Date());
-  const dailyCardsStudied = (reviewsResult.data ?? []).filter(
+  const todayReviews = (reviewsResult.data ?? []).filter(
     (row) => (row.reviewed_at as string).slice(0, 10) === todayStr,
-  ).length;
+  );
+  const dailyCardsStudied = todayReviews.length;
+
+  const todayQuizCorrect = allQuizzes
+    .filter((quiz) => (quiz.completed_at as string)?.slice(0, 10) === todayStr)
+    .reduce((sum, quiz) => sum + (quiz.score as number), 0);
+
+  const dailyXp =
+    dailyCardsStudied * game.xpPerCard + todayQuizCorrect * game.xpPerQuizCorrect;
 
   const totalQuizScore = allQuizzes.reduce(
     (sum, quiz) => sum + (quiz.score as number),
@@ -174,9 +200,35 @@ export async function fetchUserProgress(userId: string): Promise<{
     deckProgress[0] ??
     null;
 
+  const streakCalendar = buildStreakCalendar(activityDates);
+  const streak = calculateStreak(activityDates);
+
+  const hasPerfectQuiz = allQuizzes.some(
+    (quiz) =>
+      (quiz.total_questions as number) > 0 &&
+      (quiz.score as number) === (quiz.total_questions as number),
+  );
+
+  const achievements = buildAchievements({
+    streak,
+    quizzesTaken,
+    hasPerfectQuiz,
+    cardsStudied,
+    xp,
+  });
+
+  const weakDecks = buildWeakDecks(
+    allQuizzes.map((quiz) => ({
+      deckId: (quiz.deck_id as string) ?? '',
+      deckTitle: (quiz.decks as unknown as { title: string } | null)?.title ?? 'Deck',
+      score: quiz.score as number,
+      totalQuestions: quiz.total_questions as number,
+    })),
+  );
+
   return {
     data: {
-      streak: calculateStreak(activityDates),
+      streak,
       cardsStudied,
       quizzesTaken,
       averageQuizPercent,
@@ -186,7 +238,13 @@ export async function fetchUserProgress(userId: string): Promise<{
       levelInfo,
       dailyCardsStudied,
       dailyGoal: game.dailyGoal,
+      dailyXp,
+      dailyXpGoal: game.dailyXpGoal,
       continueDeck,
+      streakCalendar,
+      achievements,
+      weakDecks,
+      hasPerfectQuiz,
     },
     error: null,
   };

@@ -32,7 +32,7 @@ export function HeroCard({ name, streak, levelInfo }: HeroCardProps) {
       </View>
 
       <Text style={styles.greeting}>Hey, {name}! 👋</Text>
-      <Text style={styles.subtitle}>Ready to level up your brain?</Text>
+      <Text style={styles.subtitle}>Ready to learn something new?</Text>
 
       <View style={styles.xpSection}>
         <View style={styles.xpHeader}>

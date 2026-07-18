@@ -1,17 +1,19 @@
 import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { colors, spacing } from '@/constants/theme';
 
 type ScreenProps = {
   children: ReactNode;
   style?: ViewStyle;
+  /** Safe-area edges. Use [] when the navigator header/tab bar already handles insets. */
+  edges?: Edge[];
 };
 
-export function Screen({ children, style }: ScreenProps) {
+export function Screen({ children, style, edges = ['bottom'] }: ScreenProps) {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={edges}>
       <View style={[styles.content, style]}>{children}</View>
     </SafeAreaView>
   );
@@ -24,6 +26,8 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
   },
 });

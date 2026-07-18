@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { SettingsProvider } from '@/contexts/SettingsContext';
 
 function RootLayoutNav() {
   const { session, isLoading } = useAuth();
@@ -55,9 +56,11 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <RootLayoutNav />
-      </AuthProvider>
+      <SettingsProvider>
+        <AuthProvider>
+          <RootLayoutNav />
+        </AuthProvider>
+      </SettingsProvider>
     </SafeAreaProvider>
   );
 }

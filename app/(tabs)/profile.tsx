@@ -1,10 +1,11 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { StatCard } from '@/components/home/StatCard';
 import { Button } from '@/components/ui/Button';
 import { GameCard } from '@/components/ui/GameCard';
 import { Screen } from '@/components/ui/Screen';
-import { StatCard } from '@/components/home/StatCard';
+import { SoundToggle } from '@/components/ui/SoundToggle';
 import { XPBar } from '@/components/ui/XPBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { colors, fontSize, radius, spacing } from '@/constants/theme';
@@ -14,53 +15,68 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const { progress } = useProgress(user?.id);
 
-  const displayName = user?.email?.split('@')[0] ?? 'Player';
+  const displayName = user?.email?.split('@')[0] ?? 'Learner';
 
   return (
-    <Screen>
-      <LinearGradient
-        colors={['#2A1F5E', '#1A2235']}
-        style={styles.avatarCard}
+    <Screen style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.avatar}>🧠</Text>
-        <Text style={styles.playerName}>{displayName}</Text>
-        <Text style={styles.playerLevel}>Level {progress.levelInfo.level} Learner</Text>
-        <View style={styles.xpWrap}>
-          <XPBar progress={progress.levelInfo.progress} height={10} />
-          <Text style={styles.xpText}>
-            {progress.levelInfo.xpInLevel} / {progress.levelInfo.xpToNextLevel} XP
-          </Text>
+        <LinearGradient colors={['#2A1F5E', '#1A2235']} style={styles.avatarCard}>
+          <Text style={styles.avatar}>🧠</Text>
+          <Text style={styles.playerName}>{displayName}</Text>
+          <Text style={styles.playerLevel}>Level {progress.levelInfo.level} Learner</Text>
+          <View style={styles.xpWrap}>
+            <XPBar progress={progress.levelInfo.progress} height={10} />
+            <Text style={styles.xpText}>
+              {progress.levelInfo.xpInLevel} / {progress.levelInfo.xpToNextLevel} XP
+            </Text>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.statsRow}>
+          <StatCard label="Streak" value={progress.streak} icon="🔥" accent={colors.streak} />
+          <StatCard label="Cards" value={progress.cardsStudied} icon="🃏" accent={colors.secondary} />
+          <StatCard label="Quizzes" value={progress.quizzesTaken} icon="🏆" accent={colors.xp} />
         </View>
-      </LinearGradient>
 
-      <View style={styles.statsRow}>
-        <StatCard label="Streak" value={progress.streak} icon="🔥" accent={colors.streak} />
-        <StatCard label="Cards" value={progress.cardsStudied} icon="🃏" accent={colors.secondary} />
-        <StatCard label="Quizzes" value={progress.quizzesTaken} icon="🏆" accent={colors.xp} />
-      </View>
+        <SoundToggle />
 
-      <GameCard>
-        <Text style={styles.emailLabel}>Signed in as</Text>
-        <Text style={styles.email}>{user?.email ?? 'Unknown user'}</Text>
-      </GameCard>
+        <GameCard>
+          <Text style={styles.emailLabel}>Signed in as</Text>
+          <Text style={styles.email} numberOfLines={2}>
+            {user?.email ?? 'Unknown user'}
+          </Text>
+        </GameCard>
 
-      <Button label="Sign Out" onPress={signOut} variant="secondary" />
+        <Button label="Sign Out" onPress={signOut} variant="secondary" />
+      </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+  },
+  content: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: 100,
+  },
   avatarCard: {
     borderRadius: radius.xl,
     padding: spacing.lg,
     alignItems: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.lg,
     borderWidth: 2,
     borderColor: colors.secondary + '44',
   },
   avatar: {
-    fontSize: 64,
+    fontSize: 56,
     marginBottom: spacing.xs,
   },
   playerName: {
@@ -88,7 +104,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginBottom: spacing.lg,
   },
   emailLabel: {
     fontSize: fontSize.sm,

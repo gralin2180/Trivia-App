@@ -2,6 +2,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 import { StatCard } from '@/components/home/StatCard';
 import { DeckProgressRow } from '@/components/progress/DeckProgressRow';
+import { StreakCalendar } from '@/components/progress/StreakCalendar';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { GameCard } from '@/components/ui/GameCard';
@@ -45,6 +46,8 @@ export default function ProgressScreen() {
           <StatCard label="Cards studied" value={progress.cardsStudied} icon="🃏" accent={colors.secondary} />
           <StatCard label="Quiz avg" value={`${progress.averageQuizPercent}%`} icon="🏆" accent={colors.xp} />
         </View>
+
+        <StreakCalendar days={progress.streakCalendar} streak={progress.streak} />
 
         <GameCard variant="highlight">
           <Text style={styles.levelTitle}>⭐ Level {progress.levelInfo.level}</Text>
@@ -103,15 +106,17 @@ export default function ProgressScreen() {
 const styles = StyleSheet.create({
   screen: {
     paddingHorizontal: 0,
+    paddingTop: 0,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
-    padding: spacing.md,
-    gap: spacing.lg,
-    paddingBottom: spacing.xl,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    gap: spacing.md,
+    paddingBottom: 100,
   },
   statsRow: {
     flexDirection: 'row',

@@ -41,15 +41,20 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen>
+    <Screen edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.header}>
+            <Text style={styles.emoji}>📚</Text>
             <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue studying.</Text>
+            <Text style={styles.subtitle}>Sign in to keep learning.</Text>
           </View>
 
           {!isConfigured ? (
@@ -107,20 +112,28 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     justifyContent: 'center',
-    gap: spacing.lg,
+    gap: spacing.md,
     paddingVertical: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   header: {
     gap: spacing.xs,
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 48,
+    marginBottom: spacing.xs,
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.text,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: fontSize.md,
     color: colors.textMuted,
+    textAlign: 'center',
   },
   banner: {
     backgroundColor: '#FEF3C7',
