@@ -2,12 +2,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { buildQuizQuestions } from '@/lib/quiz';
 import { saveQuizAttempt } from '@/lib/quizAttempts';
+import { bumpQuestProgress } from '@/lib/quests';
 import type { Card } from '@/types/database';
 import type { QuizAnswer, QuizQuestion } from '@/lib/quiz';
 
 type QuizPhase = 'loading' | 'quiz' | 'results';
 
-export function useQuiz(deckId: string | undefined, cards: Card[], userId: string | undefined) {
+export function useQuiz(
+  deckId: string | undefined,
+  cards: Card[],
+  userId: string | undefined,
+  quizMode: 'normal' | 'practice' | 'timed' = 'normal',
+) {
   const [phase, setPhase] = useState<QuizPhase>('loading');
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -93,6 +99,10 @@ export function useQuiz(deckId: string | undefined, cards: Card[], userId: strin
 
     const finalScore = finalAnswers.filter((answer) => answer.isCorrect).length;
     const result = await saveQuizAttempt(userId, deckId, finalScore, questions.length);
+    void bumpQuestProgress('quiz');
+    if (quizMode === 'timed') {
+      void bumpQuestProgress('timed');
+    }
     setIsSaving(false);
 
     if (result.error) {
@@ -101,7 +111,7 @@ export function useQuiz(deckId: string | undefined, cards: Card[], userId: strin
 
     setAnswers(finalAnswers);
     setPhase('results');
-  }, [deckId, userId, currentIndex, questions.length, answers, currentQuestion, selectedOption]);
+  }, [deckId, userId, currentIndex, questions.length, answers, currentQuestion, selectedOption, quizMode]);
 
   const restart = useCallback(() => {
     setQuestions(buildQuizQuestions(cards));
@@ -116,6 +126,7 @@ export function useQuiz(deckId: string | undefined, cards: Card[], userId: strin
     () => ({
       phase,
       currentQuestion,
+      currentIndex,
       progressLabel,
       selectedOption,
       answers,
@@ -131,6 +142,7 @@ export function useQuiz(deckId: string | undefined, cards: Card[], userId: strin
     [
       phase,
       currentQuestion,
+      currentIndex,
       progressLabel,
       selectedOption,
       answers,

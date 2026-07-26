@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -12,18 +12,28 @@ import {
 import { OptionChip } from '@/components/generate/OptionChip';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
-import { generateDeckFromTopic } from '@/lib/ai/generateDeck';
 import { colors, fontSize, spacing } from '@/constants/theme';
+import { generateDeckFromTopic } from '@/lib/ai/generateDeck';
+import { bumpGuestDeckGens, guestNeedsSubscription, GUEST_FREE_DECK_LIMIT } from '@/lib/guestLimits';
+import { bumpQuestProgress } from '@/lib/quests';
+import { getSyllabusGap } from '@/lib/syllabusGaps';
 import type { DifficultyLevel, StudyMode } from '@/types/generate';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function GenerateSetupScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ topic?: string }>();
-  const topic = (params.topic ?? '').trim();
+  const { isGuest } = useAuth();
+  const params = useLocalSearchParams<{ topic?: string; gapId?: string }>();
+  const gap = useMemo(() => {
+    const id = Array.isArray(params.gapId) ? params.gapId[0] : params.gapId;
+    return id ? getSyllabusGap(id) : undefined;
+  }, [params.gapId]);
+
+  const topic = (gap?.topic ?? params.topic ?? '').trim();
 
   const [mode, setMode] = useState<StudyMode>('study');
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>('easy');
-  const [customPrompt, setCustomPrompt] = useState('');
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium');
+  const [customPrompt, setCustomPrompt] = useState(gap?.deckPrompt ?? '');
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,12 +41,17 @@ export default function GenerateSetupScreen() {
   async function handleGenerate() {
     if (!topic) {
       setIsError(true);
-      setMessage('No topic provided. Go back and enter a topic first.');
+      setMessage('No topic provided. Go back to Home and enter what you want to learn.');
+      return;
+    }
+
+    if (isGuest && (await guestNeedsSubscription())) {
+      router.push('/subscribe');
       return;
     }
 
     setIsLoading(true);
-    setMessage('Generating your deck... This may take 10–20 seconds.');
+    setMessage('Generating with AI pipeline (context + difficulty judge)... 10–30s.');
     setIsError(false);
 
     const result = await generateDeckFromTopic({
@@ -54,12 +69,24 @@ export default function GenerateSetupScreen() {
       return;
     }
 
-    if (mode === 'quiz') {
-      router.replace(`/quiz/${result.deckId}`);
-      return;
+    void bumpQuestProgress('generate');
+
+    let hitLimit = false;
+    if (isGuest) {
+      const gens = await bumpGuestDeckGens();
+      hitLimit = gens >= GUEST_FREE_DECK_LIMIT;
     }
 
-    router.replace(`/study/${result.deckId}`);
+    if (mode === 'quiz') {
+      router.replace(`/quiz/${result.deckId}`);
+    } else {
+      router.replace(`/study/${result.deckId}`);
+    }
+
+    if (hitLimit) {
+      // Let the deck open, then send guests to the plan page
+      setTimeout(() => router.push('/subscribe'), 600);
+    }
   }
 
   if (!topic) {
@@ -78,9 +105,28 @@ export default function GenerateSetupScreen() {
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.eyebrow}>Your topic</Text>
-          <Text style={styles.topicTitle}>{topic}</Text>
-          <Text style={styles.subtitle}>Choose how you want to learn, then generate your deck.</Text>
+          <Text style={styles.eyebrow}>{gap ? 'Syllabus gap' : 'Your topic'}</Text>
+          <Text style={styles.topicTitle}>{gap?.title ?? topic}</Text>
+          {gap ? (
+            <>
+              <Text style={styles.subtitle}>{gap.lagSummary}</Text>
+              <View style={styles.statList}>
+                {gap.stats.map((stat) => (
+                  <Text key={stat} style={styles.statLine}>
+                    • {stat}
+                  </Text>
+                ))}
+              </View>
+              <Text style={styles.bridgeTitle}>Bridge skills</Text>
+              {gap.bridgeSkills.map((skill) => (
+                <Text key={skill} style={styles.statLine}>
+                  → {skill}
+                </Text>
+              ))}
+            </>
+          ) : (
+            <Text style={styles.subtitle}>Choose how you want to learn, then generate your deck.</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -113,9 +159,11 @@ export default function GenerateSetupScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>3. Custom prompt (optional)</Text>
+          <Text style={styles.sectionTitle}>3. Custom prompt {gap ? '(pre-filled)' : '(optional)'}</Text>
           <Text style={styles.hint}>
-            Add extra instructions so the AI makes better cards for you.
+            {gap
+              ? 'Tweak this prompt so the deck focuses on the exact gap you care about.'
+              : 'Add extra instructions so the AI makes better cards for you.'}
           </Text>
           <TextInput
             value={customPrompt}
@@ -130,7 +178,7 @@ export default function GenerateSetupScreen() {
         </View>
 
         <Button
-          label={isLoading ? 'Generating...' : 'Generate deck'}
+          label={isLoading ? 'Generating...' : gap ? 'Build bridge deck' : 'Generate deck'}
           onPress={handleGenerate}
         />
 
@@ -176,6 +224,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.textMuted,
     lineHeight: 22,
+  },
+  statList: { gap: 4, marginTop: spacing.xs },
+  statLine: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    lineHeight: 18,
+  },
+  bridgeTitle: {
+    marginTop: spacing.sm,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.text,
   },
   section: {
     gap: spacing.sm,

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 import { config } from '@/constants/config';
 import { signInWithSocialProvider, type SocialProvider } from '@/lib/auth/oauth';
+import { loadGuestMode, saveGuestMode } from '@/lib/settings';
 import { supabase } from '@/lib/supabase';
 
 type AuthResult = {
@@ -14,9 +15,13 @@ type AuthContextValue = {
   user: User | null;
   isLoading: boolean;
   isConfigured: boolean;
+  isGuest: boolean;
+  /** Signed in OR exploring as guest */
+  canUseApp: boolean;
   signIn: (email: string, password: string) => Promise<AuthResult>;
   signUp: (email: string, password: string) => Promise<AuthResult>;
   signInWithProvider: (provider: SocialProvider) => Promise<string | null>;
+  continueAsGuest: () => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -34,41 +39,100 @@ function mapAuthError(message: string): string {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [isGuest, setIsGuest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (!config.isSupabaseConfigured) {
-      setIsLoading(false);
-      return;
+    let mounted = true;
+
+    // Hard ceiling so the splash never sticks on web
+    const hardStop = setTimeout(() => {
+      if (mounted) setIsLoading(false);
+    }, 1200);
+
+    async function boot() {
+      try {
+        const guest = await Promise.race([
+          loadGuestMode(),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 800)),
+        ]);
+
+        if (!config.isSupabaseConfigured) {
+          if (mounted) {
+            setIsGuest(guest);
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        const sessionPromise = supabase.auth.getSession();
+        const timeout = new Promise<{ data: { session: null } }>((resolve) => {
+          setTimeout(() => resolve({ data: { session: null } }), 1000);
+        });
+        const { data } = await Promise.race([sessionPromise, timeout]);
+        if (!mounted) return;
+
+        setSession(data.session);
+        setIsGuest(data.session ? false : guest);
+        if (data.session) {
+          void saveGuestMode(false);
+        }
+      } catch {
+        // fall through — still leave splash
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
     }
 
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setIsLoading(false);
-    });
+    void boot();
+
+    if (!config.isSupabaseConfigured) {
+      return () => {
+        mounted = false;
+        clearTimeout(hardStop);
+      };
+    }
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
+      if (nextSession) {
+        setIsGuest(false);
+        void saveGuestMode(false);
+      }
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(hardStop);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({
+    () => {
+      const isAnonymous = Boolean(session?.user?.is_anonymous);
+      const guestLike = isGuest || isAnonymous;
+
+      return {
       session,
       user: session?.user ?? null,
       isLoading,
       isConfigured: config.isSupabaseConfigured,
+      isGuest: guestLike,
+      canUseApp: Boolean(session) || isGuest,
       signIn: async (email, password) => {
         if (!config.isSupabaseConfigured) {
           return { error: 'Supabase is not configured. Add your .env file and restart the app.' };
         }
 
         const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (!error) {
+          setIsGuest(false);
+          await saveGuestMode(false);
+        }
         return { error: error ? mapAuthError(error.message) : null };
       },
       signUp: async (email, password) => {
@@ -84,13 +148,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return 'Supabase is not configured. Add your .env file and restart the app.';
         }
 
-        return signInWithSocialProvider(provider);
+        const error = await signInWithSocialProvider(provider);
+        if (!error) {
+          setIsGuest(false);
+          await saveGuestMode(false);
+        }
+        return error;
+      },
+      continueAsGuest: async () => {
+        // Prefer local guest immediately so onboarding never hangs waiting on network.
+        setIsGuest(true);
+        await saveGuestMode(true);
+
+        if (config.isSupabaseConfigured) {
+          try {
+            const anon = supabase.auth.signInAnonymously();
+            const timeout = new Promise<{ data: { session: null }; error: { message: string } }>(
+              (resolve) =>
+                setTimeout(
+                  () => resolve({ data: { session: null }, error: { message: 'timeout' } }),
+                  2000,
+                ),
+            );
+            const result = (await Promise.race([anon, timeout])) as {
+              data: { session: Session | null };
+              error: { message: string } | null;
+            };
+            if (!result.error && result.data.session) {
+              setIsGuest(false);
+              await saveGuestMode(false);
+            }
+          } catch {
+            // stay as local guest
+          }
+        }
+
+        return null;
       },
       signOut: async () => {
-        await supabase.auth.signOut();
+        setIsGuest(false);
+        await saveGuestMode(false);
+        if (config.isSupabaseConfigured) {
+          await supabase.auth.signOut();
+        } else {
+          setSession(null);
+        }
       },
-    }),
-    [session, isLoading],
+    };
+    },
+    [session, isLoading, isGuest],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

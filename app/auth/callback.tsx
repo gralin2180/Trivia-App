@@ -1,26 +1,50 @@
 import { useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { Screen } from '@/components/ui/Screen';
+import { useAuth } from '@/contexts/AuthContext';
 import { createSessionFromUrl } from '@/lib/auth/oauth';
 import { colors, fontSize, spacing } from '@/constants/theme';
 
 export default function AuthCallbackScreen() {
   const router = useRouter();
+  const { session } = useAuth();
+  const url = Linking.useURL();
+  const handledRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function finishAuth() {
-      const url = await Linking.getInitialURL();
-      if (!url) {
-        setError('No sign-in response received.');
+    if (session) {
+      router.replace('/(tabs)');
+    }
+  }, [session, router]);
+
+  useEffect(() => {
+    if (session) {
+      return;
+    }
+
+    let cancelled = false;
+    let failTimer: ReturnType<typeof setTimeout> | undefined;
+
+    async function finishAuth(href: string) {
+      if (handledRef.current || cancelled || !href.includes('auth/callback')) {
+        return;
+      }
+      handledRef.current = true;
+      if (failTimer) {
+        clearTimeout(failTimer);
+      }
+
+      const authError = await createSessionFromUrl(href);
+      if (cancelled) {
         return;
       }
 
-      const authError = await createSessionFromUrl(url);
       if (authError) {
+        handledRef.current = false;
         setError(authError);
         return;
       }
@@ -28,8 +52,41 @@ export default function AuthCallbackScreen() {
       router.replace('/(tabs)');
     }
 
-    finishAuth();
-  }, [router]);
+    void (async () => {
+      const initial = await Linking.getInitialURL();
+      const href = url ?? initial;
+      if (href) {
+        await finishAuth(href);
+      }
+    })();
+
+    failTimer = setTimeout(() => {
+      if (!handledRef.current && !cancelled) {
+        setError('No sign-in response received.');
+      }
+    }, 2500);
+
+    const subscription = Linking.addEventListener('url', ({ url: eventUrl }) => {
+      void finishAuth(eventUrl);
+    });
+
+    return () => {
+      cancelled = true;
+      if (failTimer) {
+        clearTimeout(failTimer);
+      }
+      subscription.remove();
+    };
+  }, [url, session, router]);
+
+  if (session) {
+    return (
+      <Screen style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={styles.loading}>Signed in…</Text>
+      </Screen>
+    );
+  }
 
   return (
     <Screen style={styles.centered}>

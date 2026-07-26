@@ -2,7 +2,9 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Platform, Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/constants/theme';
+import { fonts, fontSize, radius, spacing } from '@/constants/theme';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type ButtonProps = {
   label: string;
@@ -13,12 +15,6 @@ type ButtonProps = {
   disabled?: boolean;
 };
 
-function triggerHaptic() {
-  if (Platform.OS !== 'web') {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }
-}
-
 export function Button({
   label,
   onPress,
@@ -27,16 +23,17 @@ export function Button({
   icon,
   disabled = false,
 }: ButtonProps) {
-  const isPrimary = variant === 'primary';
-  const isPurple = variant === 'purple';
-  const isDanger = variant === 'danger';
+  const { colors } = useTheme();
+  const { hapticsEnabled } = useSettings();
 
   function handlePress() {
-    triggerHaptic();
+    if (hapticsEnabled && Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     onPress();
   }
 
-  if (isPrimary) {
+  if (variant === 'primary') {
     return (
       <Pressable
         onPress={handlePress}
@@ -49,38 +46,34 @@ export function Button({
         ]}
       >
         <LinearGradient
-          colors={['#89E219', '#58CC02']}
+          colors={[...colors.primaryGradient]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          end={{ x: 1, y: 1 }}
           style={styles.gradient}
         >
-          <View style={styles.primaryInner}>
+          <View style={styles.row}>
             {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-            <Text style={styles.label}>{label}</Text>
+            <Text style={[styles.label, { color: colors.textOnPrimary, fontFamily: fonts.bodyBold }]}>
+              {label}
+            </Text>
           </View>
         </LinearGradient>
-        <View style={styles.primaryShadow} />
       </Pressable>
     );
   }
 
-  const bgColor =
+  const bg =
     variant === 'secondary'
-      ? colors.surfaceLight
-      : isPurple
+      ? colors.surfaceHighlight
+      : variant === 'purple'
         ? colors.secondary
-        : isDanger
-          ? colors.error
-          : colors.surfaceLight;
-
-  const shadowColor =
+        : colors.error;
+  const fg =
     variant === 'secondary'
-      ? colors.border
-      : isPurple
-        ? colors.secondaryDark
-        : isDanger
-          ? colors.errorDark
-          : colors.border;
+      ? colors.text
+      : variant === 'purple'
+        ? colors.textOnPrimary
+        : '#FFFFFF';
 
   return (
     <Pressable
@@ -88,16 +81,25 @@ export function Button({
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        styles.altButton,
-        { backgroundColor: bgColor, borderBottomColor: shadowColor },
+        styles.alt,
+        { backgroundColor: bg },
         pressed && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      <View style={styles.altInner}>
+      <View style={styles.row}>
         {icon ? <Text style={styles.icon}>{icon}</Text> : null}
-        <Text style={[styles.label, variant === 'secondary' && styles.secondaryLabel]}>
+        <Text
+          style={[
+            styles.label,
+            {
+              color: fg,
+              fontFamily: fonts.bodyBold,
+              textTransform: variant === 'secondary' ? 'none' : 'uppercase',
+            },
+          ]}
+        >
           {label}
         </Text>
       </View>
@@ -108,65 +110,33 @@ export function Button({
 const styles = StyleSheet.create({
   base: {
     borderRadius: radius.md,
-    overflow: 'visible',
-    position: 'relative',
+    overflow: 'hidden',
   },
   gradient: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md + 2,
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderBottomWidth: 4,
-    borderBottomColor: colors.primaryDark,
   },
-  primaryInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  primaryShadow: {
-    position: 'absolute',
-    bottom: -2,
-    left: 4,
-    right: 4,
-    height: 4,
-    backgroundColor: colors.primaryDark,
-    borderRadius: radius.sm,
-    zIndex: -1,
-  },
-  altButton: {
-    paddingVertical: spacing.md + 2,
+  alt: {
+    paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    borderBottomWidth: 4,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  altInner: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
   },
   pressed: {
-    transform: [{ translateY: 2 }],
-    borderBottomWidth: 2,
-    opacity: 0.92,
+    opacity: 0.9,
+    transform: [{ scale: 0.985 }],
   },
   disabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
   label: {
-    color: '#FFFFFF',
     fontSize: fontSize.md,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
-  },
-  secondaryLabel: {
-    color: colors.text,
-    textTransform: 'none',
-    fontWeight: '700',
   },
   icon: {
     fontSize: fontSize.lg,

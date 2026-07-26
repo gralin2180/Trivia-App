@@ -51,6 +51,8 @@ export type Achievement = {
   id: string;
   icon: string;
   label: string;
+  description: string;
+  category: 'starter' | 'streak' | 'quiz' | 'study' | 'legend';
   unlocked: boolean;
 };
 
@@ -65,32 +67,98 @@ export function buildAchievements(input: {
     {
       id: 'first_study',
       icon: '📖',
-      label: 'First study',
+      label: 'First spark',
+      description: 'Study your first card.',
+      category: 'starter',
       unlocked: input.cardsStudied >= 1,
+    },
+    {
+      id: 'cards_25',
+      icon: '🃏',
+      label: 'Card collector',
+      description: 'Study 25 cards.',
+      category: 'study',
+      unlocked: input.cardsStudied >= 25,
+    },
+    {
+      id: 'cards_100',
+      icon: '📚',
+      label: 'Deep dive',
+      description: 'Study 100 cards.',
+      category: 'study',
+      unlocked: input.cardsStudied >= 100,
+    },
+    {
+      id: 'streak_3',
+      icon: '✨',
+      label: 'Warm-up',
+      description: 'Keep a 3-day streak.',
+      category: 'streak',
+      unlocked: input.streak >= 3,
     },
     {
       id: 'streak_7',
       icon: '🔥',
-      label: '7-day streak',
+      label: 'On fire',
+      description: 'Keep a 7-day streak.',
+      category: 'streak',
       unlocked: input.streak >= 7,
     },
     {
-      id: 'perfect',
-      icon: '🏆',
-      label: 'Perfect quiz',
-      unlocked: input.hasPerfectQuiz,
+      id: 'streak_30',
+      icon: '💎',
+      label: 'Unstoppable',
+      description: 'Keep a 30-day streak.',
+      category: 'streak',
+      unlocked: input.streak >= 30,
+    },
+    {
+      id: 'quiz_1',
+      icon: '🎯',
+      label: 'Quiz starter',
+      description: 'Finish your first quiz.',
+      category: 'quiz',
+      unlocked: input.quizzesTaken >= 1,
     },
     {
       id: 'quiz_5',
       icon: '⚡',
-      label: '5 quizzes',
+      label: 'Quiz hustle',
+      description: 'Complete 5 quizzes.',
+      category: 'quiz',
       unlocked: input.quizzesTaken >= 5,
+    },
+    {
+      id: 'quiz_25',
+      icon: '🧠',
+      label: 'Quiz veteran',
+      description: 'Complete 25 quizzes.',
+      category: 'quiz',
+      unlocked: input.quizzesTaken >= 25,
+    },
+    {
+      id: 'perfect',
+      icon: '🏆',
+      label: 'Perfect run',
+      description: 'Score 100% on a quiz.',
+      category: 'quiz',
+      unlocked: input.hasPerfectQuiz,
     },
     {
       id: 'xp_300',
       icon: '⭐',
-      label: '300 XP',
+      label: 'Rising mind',
+      description: 'Earn 300 XP.',
+      category: 'legend',
       unlocked: input.xp >= 300,
+    },
+    {
+      id: 'xp_1000',
+      icon: '👑',
+      label: 'Acumen elite',
+      description: 'Earn 1,000 XP.',
+      category: 'legend',
+      unlocked: input.xp >= 1000,
     },
   ];
 }

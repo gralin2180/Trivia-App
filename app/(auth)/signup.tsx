@@ -1,20 +1,13 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { AuthShell } from '@/components/auth/AuthShell';
 import { SocialAuthButtons } from '@/components/auth/SocialAuthButtons';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Screen } from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { colors, fontSize, radius, spacing } from '@/constants/theme';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -54,126 +47,114 @@ export default function SignupScreen() {
       return;
     }
 
-    setSuccess('Account created! Check your email if confirmation is required, then sign in.');
-    setTimeout(() => router.replace('/(auth)/login'), 2000);
+    setSuccess('Account created! Redirecting to sign in…');
+    setTimeout(() => router.replace('/(auth)/login'), 1600);
   }
 
   return (
-    <Screen edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.header}>
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>Start building your study streak.</Text>
-          </View>
-
-          {!isConfigured ? (
-            <View style={styles.banner}>
-              <Text style={styles.bannerText}>
-                Add your Supabase keys to a `.env` file, then restart the dev server.
-              </Text>
-            </View>
-          ) : null}
-
-          <View style={styles.form}>
-            <SocialAuthButtons onError={setError} />
-
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              placeholder="you@example.com"
-            />
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              placeholder="At least 6 characters"
-            />
-            <Input
-              label="Confirm password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoComplete="new-password"
-              placeholder="Repeat password"
-            />
-            {error ? <Text style={styles.error}>{error}</Text> : null}
-            {success ? <Text style={styles.success}>{success}</Text> : null}
-            <Button
-              label={isSubmitting ? 'Creating account...' : 'Sign up with email'}
-              onPress={handleSignup}
-              variant="secondary"
-            />
-          </View>
-
-          <Text style={styles.footer}>
-            Already have an account?{' '}
-            <Link href="/(auth)/login" style={styles.link}>
-              Sign in
-            </Link>
+    <AuthShell
+      title="Create your account"
+      subtitle="Start a streak. Learn any topic in minutes."
+      footer={
+        <Text style={styles.footer}>
+          Already learning?{' '}
+          <Link href="/(auth)/login" style={styles.link}>
+            Sign in
+          </Link>
+        </Text>
+      }
+    >
+      {!isConfigured ? (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>
+            Add your Supabase keys to a `.env` file, then restart the app.
           </Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </Screen>
+        </View>
+      ) : null}
+
+      <SocialAuthButtons onError={setError} />
+
+      <Input
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        autoComplete="email"
+        keyboardType="email-address"
+        placeholder="you@example.com"
+      />
+      <Input
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+        autoComplete="new-password"
+        placeholder="At least 6 characters"
+      />
+      <Input
+        label="Confirm password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
+        autoComplete="new-password"
+        placeholder="Repeat password"
+      />
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : null}
+      {success ? (
+        <View style={styles.successBox}>
+          <Text style={styles.success}>{success}</Text>
+        </View>
+      ) : null}
+
+      <Button
+        label={isSubmitting ? 'Creating…' : 'Get started'}
+        onPress={handleSignup}
+        disabled={isSubmitting}
+      />
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: fontSize.md,
-    color: colors.textMuted,
-  },
   banner: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 12,
+    backgroundColor: colors.warning,
+    borderRadius: radius.md,
     padding: spacing.md,
   },
   bannerText: {
     fontSize: fontSize.sm,
-    color: '#92400E',
+    color: '#1A1200',
+    fontWeight: '600',
     lineHeight: 20,
   },
-  form: {
-    gap: spacing.md,
+  errorBox: {
+    backgroundColor: colors.errorBg,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.errorDark,
   },
   error: {
     fontSize: fontSize.sm,
     color: colors.error,
+    fontWeight: '600',
+  },
+  successBox: {
+    backgroundColor: colors.successBg,
+    borderRadius: radius.sm,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.successDark,
   },
   success: {
     fontSize: fontSize.sm,
     color: colors.success,
+    fontWeight: '600',
   },
   footer: {
     textAlign: 'center',
@@ -182,6 +163,6 @@ const styles = StyleSheet.create({
   },
   link: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '800',
   },
 });

@@ -1,0 +1,17 @@
+---
+description: Load durable project notes from context/ when relevant
+alwaysApply: true
+---
+
+# Project context folder
+
+Long-lived facts live in `context/` so chats do not need to rediscover them.
+
+- Before re-investigating hosting, tunnels, or APK ↔ API wiring, read `context/hosting-mvp.md`.
+- For stack / request paths, read `context/architecture.md`.
+- For day-to-day demo commands, read `context/runbook.md`.
+
+When you learn a durable fact (how hosting works, a non-obvious bugfix, env layout),
+update the matching file under `context/` instead of only saying it in chat.
+
+Never put secrets in `context/`.

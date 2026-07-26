@@ -2,9 +2,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { colors, fontSize } from '@/constants/theme';
+import { fonts, fontSize } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function TabsLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{
@@ -14,17 +17,15 @@ export default function TabsLayout() {
         },
         headerTintColor: colors.text,
         headerTitleStyle: {
-          fontWeight: '800',
+          fontFamily: fonts.displayBold,
           fontSize: fontSize.lg,
         },
         headerShadowVisible: false,
-        // Let React Navigation own the home-indicator inset on native.
-        // On web, add enough padding so labels aren't clipped by browser chrome.
         tabBarStyle: Platform.select({
           web: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
-            borderTopWidth: 2,
+            borderTopWidth: 1,
             height: 72,
             paddingTop: 8,
             paddingBottom: 14,
@@ -32,14 +33,14 @@ export default function TabsLayout() {
           default: {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
-            borderTopWidth: 2,
+            borderTopWidth: 1,
             paddingTop: 6,
           },
         }),
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
-          fontWeight: '700',
+          fontFamily: fonts.bodyMedium,
           fontSize: 11,
           marginBottom: Platform.OS === 'web' ? 4 : 0,
         },
@@ -49,39 +50,33 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Learn',
-          headerTitle: '📚 Learn',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book" size={size} color={color} />
-          ),
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="decks"
         options={{
           title: 'Decks',
-          headerTitle: '🃏 Decks',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="library" size={size} color={color} />
+            <Ionicons name="albums-outline" size={size} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="practice"
+        name="quests"
         options={{
-          title: 'Practice',
-          headerTitle: '⚔️ Practice',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="flash" size={size} color={color} />
-          ),
+          title: 'Quests',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => <Ionicons name="flag-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="progress"
+        name="leaderboard"
         options={{
-          title: 'Stats',
-          headerTitle: '📊 Stats',
+          title: 'Ranks',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="trophy" size={size} color={color} />
+            <Ionicons name="trophy-outline" size={size} color={color} />
           ),
         }}
       />
@@ -89,12 +84,15 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          headerTitle: '👤 Profile',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+            <Ionicons name="person-outline" size={size} color={color} />
           ),
         }}
       />
+      {/* Hidden routes — still reachable */}
+      <Tabs.Screen name="practice" options={{ href: null, title: 'Practice', headerShown: false }} />
+      <Tabs.Screen name="progress" options={{ href: null, title: 'Stats', headerShown: false }} />
     </Tabs>
   );
 }

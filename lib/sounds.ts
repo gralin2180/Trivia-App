@@ -11,14 +11,26 @@ const SOUND_URLS: Record<SoundName, string> = {
 };
 
 let soundEnabled = true;
+let sfxVolume = 0.8;
 const players = new Map<SoundName, AudioPlayer>();
 
 export function setGlobalSoundEnabled(enabled: boolean) {
   soundEnabled = enabled;
 }
 
+export function setGlobalSfxVolume(volume: number) {
+  sfxVolume = Math.min(1, Math.max(0, volume));
+  for (const player of players.values()) {
+    try {
+      player.volume = sfxVolume;
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export function playSound(name: SoundName) {
-  if (!soundEnabled) return;
+  if (!soundEnabled || sfxVolume <= 0.01) return;
 
   try {
     let player = players.get(name);
@@ -26,6 +38,7 @@ export function playSound(name: SoundName) {
       player = createAudioPlayer(SOUND_URLS[name]);
       players.set(name, player);
     }
+    player.volume = sfxVolume;
     player.seekTo(0);
     player.play();
   } catch {

@@ -36,7 +36,7 @@ export function ConfettiOverlay({ visible, onFinish }: ConfettiOverlayProps) {
 
 const styles = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 100,
     elevation: 100,
   },

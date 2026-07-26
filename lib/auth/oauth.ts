@@ -12,6 +12,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 export type SocialProvider = 'google' | 'apple';
 
+/** Prevents double-exchange when deep link + WebBrowser both deliver the same callback. */
+const handledAuthCodes = new Set<string>();
+
 function mapOAuthError(message: string): string {
   if (message.includes('popup_closed') || message.includes('User cancelled')) {
     return 'Sign in was cancelled.';
@@ -23,18 +26,29 @@ function mapOAuthError(message: string): string {
 }
 
 export function getOAuthRedirectUri(): string {
-  const scheme = Constants.expoConfig?.scheme ?? 'triviaapp';
+  const rawScheme = Constants.expoConfig?.scheme ?? 'triviaapp';
+  const scheme = Array.isArray(rawScheme) ? rawScheme[0] : rawScheme;
 
-  // Expo Go uses exp://192.168.x.x:port/--/auth/callback
-  // Standalone builds use triviaapp://auth/callback
+  // Expo Go (dev client in Expo Go app)
   if (Constants.appOwnership === 'expo') {
     return makeRedirectUri({ path: 'auth/callback' });
   }
 
+  // Standalone APK / IPA — always deep-link back into the app
+  if (Platform.OS === 'android' || Platform.OS === 'ios') {
+    return `${scheme}://auth/callback`;
+  }
+
+  // Web (localhost / HTTPS tunnel)
   return makeRedirectUri({
     scheme,
     path: 'auth/callback',
   });
+}
+
+async function hasActiveSession(): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data.session?.access_token);
 }
 
 export async function createSessionFromUrl(url: string): Promise<string | null> {
@@ -49,20 +63,39 @@ export async function createSessionFromUrl(url: string): Promise<string | null> 
   }
 
   if (params.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
-    return error ? mapOAuthError(error.message) : null;
+    const code = String(params.code);
+    if (handledAuthCodes.has(code)) {
+      return (await hasActiveSession()) ? null : 'Sign in did not complete. Try again.';
+    }
+    handledAuthCodes.add(code);
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      return null;
+    }
+
+    // Code already used by the other handler — treat as success if session exists.
+    if (await hasActiveSession()) {
+      return null;
+    }
+
+    handledAuthCodes.delete(code);
+    return mapOAuthError(error.message);
   }
 
   const accessToken = params.access_token;
   const refreshToken = params.refresh_token;
 
   if (!accessToken) {
+    if (await hasActiveSession()) {
+      return null;
+    }
     return `Sign in did not return a session. Add this redirect URL in Supabase:\n${getOAuthRedirectUri()}`;
   }
 
   const { error } = await supabase.auth.setSession({
     access_token: accessToken,
-    refresh_token: refreshToken,
+    refresh_token: refreshToken ?? '',
   });
 
   return error ? mapOAuthError(error.message) : null;
@@ -87,6 +120,17 @@ function waitForAuthRedirect(redirectTo: string, timeoutMs = 120_000): Promise<s
   });
 }
 
+async function waitForSession(timeoutMs = 4000): Promise<boolean> {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (await hasActiveSession()) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return hasActiveSession();
+}
+
 async function signInWithOAuthBrowser(provider: SocialProvider): Promise<string | null> {
   const redirectTo = getOAuthRedirectUri();
 
@@ -107,7 +151,9 @@ async function signInWithOAuthBrowser(provider: SocialProvider): Promise<string 
   }
 
   const redirectPromise =
-    Platform.OS === 'android' ? waitForAuthRedirect(redirectTo) : Promise.resolve(null);
+    Platform.OS === 'android' || Platform.OS === 'ios'
+      ? waitForAuthRedirect(redirectTo)
+      : Promise.resolve(null);
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
     showInRecents: true,
@@ -116,12 +162,17 @@ async function signInWithOAuthBrowser(provider: SocialProvider): Promise<string 
   const callbackUrl =
     result.type === 'success'
       ? result.url
-      : Platform.OS === 'android'
+      : Platform.OS === 'android' || Platform.OS === 'ios'
         ? await redirectPromise
         : null;
 
   if (callbackUrl) {
     return createSessionFromUrl(callbackUrl);
+  }
+
+  // Android often dismisses the browser while the deep-link handler already signed in.
+  if (await waitForSession()) {
+    return null;
   }
 
   if (result.type === 'cancel' || result.type === 'dismiss') {

@@ -33,6 +33,13 @@ yarn-error.*
 # local env files
 .env
 .env*.local
+python-api/.env
+python-api/.venv/
+python-api/__pycache__/
+python-api/**/__pycache__/
+
+# self-hosting logs
+.logs/
 
 # typescript
 *.tsbuildinfo
@@ -40,6 +47,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local install artifacts
+/artifacts/
+*.apk
 
 # local dev QR codes
 expo-qr.png

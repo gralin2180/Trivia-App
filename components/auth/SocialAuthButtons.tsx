@@ -1,20 +1,58 @@
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
-import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { colors, fontSize, radius, spacing } from '@/constants/theme';
 import { getOAuthRedirectUri, type SocialProvider } from '@/lib/auth/oauth';
 
 type SocialAuthButtonsProps = {
   onError: (message: string) => void;
 };
 
+function GoogleLogo({ size = 20 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <Path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <Path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <Path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </Svg>
+  );
+}
+
+function AppleLogo({ size = 20, color = '#FFFFFF' }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        fill={color}
+        d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
+      />
+    </Svg>
+  );
+}
+
 export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
   const { signInWithProvider } = useAuth();
   const [loadingProvider, setLoadingProvider] = useState<SocialProvider | null>(null);
 
   async function handleProvider(provider: SocialProvider) {
+    if (__DEV__) {
+      console.log(`[auth] OAuth redirect URI → add in Supabase: ${getOAuthRedirectUri()}`);
+    }
+
     setLoadingProvider(provider);
     const error = await signInWithProvider(provider);
     setLoadingProvider(null);
@@ -26,30 +64,35 @@ export function SocialAuthButtons({ onError }: SocialAuthButtonsProps) {
 
   return (
     <View style={styles.container}>
-      <Button
-        label={loadingProvider === 'google' ? 'Opening Google...' : 'Continue with Google'}
+      <Pressable
         onPress={() => handleProvider('google')}
-        variant="secondary"
-        style={styles.button}
-      />
+        disabled={loadingProvider !== null}
+        style={({ pressed }) => [styles.socialBtn, pressed && styles.pressed]}
+      >
+        <GoogleLogo size={22} />
+        <Text style={styles.socialLabel}>
+          {loadingProvider === 'google' ? 'Opening Google…' : 'Continue with Google'}
+        </Text>
+      </Pressable>
+
       {(Platform.OS === 'ios' || Platform.OS === 'android' || Platform.OS === 'web') && (
-        <Button
-          label={loadingProvider === 'apple' ? 'Opening Apple...' : 'Continue with Apple'}
+        <Pressable
           onPress={() => handleProvider('apple')}
-          variant="secondary"
-          style={styles.button}
-        />
+          disabled={loadingProvider !== null}
+          style={({ pressed }) => [styles.socialBtn, styles.appleBtn, pressed && styles.pressed]}
+        >
+          <AppleLogo size={20} color="#111111" />
+          <Text style={[styles.socialLabel, styles.appleLabel]}>
+            {loadingProvider === 'apple' ? 'Opening Apple…' : 'Continue with Apple'}
+          </Text>
+        </Pressable>
       )}
+
       <View style={styles.dividerRow}>
         <View style={styles.dividerLine} />
-        <Text style={styles.dividerText}>or use email</Text>
+        <Text style={styles.dividerText}>or email</Text>
         <View style={styles.dividerLine} />
       </View>
-      {__DEV__ ? (
-        <Text style={styles.devHint} selectable>
-          Dev redirect URL (add in Supabase): {getOAuthRedirectUri()}
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -58,14 +101,40 @@ const styles = StyleSheet.create({
   container: {
     gap: spacing.sm,
   },
-  button: {
-    width: '100%',
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    paddingHorizontal: spacing.md,
+  },
+  appleBtn: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  pressed: {
+    opacity: 0.88,
+    transform: [{ translateY: 1 }],
+  },
+  socialLabel: {
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  appleLabel: {
+    color: '#111111',
   },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     marginTop: spacing.xs,
+    marginBottom: spacing.xs,
   },
   dividerLine: {
     flex: 1,
@@ -74,11 +143,9 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  devHint: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    lineHeight: 18,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
 });

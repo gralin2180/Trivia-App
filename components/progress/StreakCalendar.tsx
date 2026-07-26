@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { GameCard } from '@/components/ui/GameCard';
-import { colors, fontSize, radius, spacing } from '@/constants/theme';
+import { fonts, fontSize, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { StreakDay } from '@/lib/gamification';
 
 type StreakCalendarProps = {
@@ -10,74 +10,73 @@ type StreakCalendarProps = {
 };
 
 export function StreakCalendar({ days, streak }: StreakCalendarProps) {
-  // Show one week on mobile so dots don't overflow
+  const { colors } = useTheme();
   const week = days.slice(-7);
 
   return (
-    <GameCard variant="quest">
+    <View style={styles.wrap}>
       <View style={styles.header}>
-        <Text style={styles.title}>🔥 Streak</Text>
-        <View style={styles.streakBadge}>
-          <Text style={styles.streakText}>{streak} days</Text>
-        </View>
+        <Text style={[styles.title, { color: colors.text, fontFamily: fonts.displayBold }]}>
+          This week
+        </Text>
+        <Text style={[styles.streakText, { color: colors.primary, fontFamily: fonts.bodyBold }]}>
+          {streak} day streak
+        </Text>
       </View>
-
-      <Text style={styles.subtitle}>This week’s activity</Text>
 
       <View style={styles.grid}>
         {week.map((day) => (
           <View key={day.date} style={styles.dayCol}>
-            <Text style={[styles.weekday, day.isToday && styles.weekdayToday]}>
+            <Text
+              style={[
+                styles.weekday,
+                { color: day.isToday ? colors.primary : colors.textSecondary, fontFamily: fonts.bodyMedium },
+              ]}
+            >
               {day.weekday}
             </Text>
             <View
               style={[
                 styles.dayDot,
-                day.active && styles.dayActive,
-                day.isToday && styles.dayToday,
+                {
+                  backgroundColor: day.active ? colors.primary : colors.surfaceHighlight,
+                  borderColor: day.isToday ? colors.primary : 'transparent',
+                },
               ]}
             >
-              <Text style={[styles.dayNum, day.active && styles.dayNumActive]}>
-                {day.active ? '🔥' : day.dayNum}
+              <Text
+                style={[
+                  styles.dayNum,
+                  {
+                    color: day.active ? colors.textOnPrimary : colors.textSecondary,
+                    fontFamily: fonts.bodyBold,
+                  },
+                ]}
+              >
+                {day.dayNum}
               </Text>
             </View>
           </View>
         ))}
       </View>
-    </GameCard>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    gap: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.xs,
   },
   title: {
     fontSize: fontSize.lg,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  streakBadge: {
-    backgroundColor: colors.streak + '33',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.streak,
   },
   streakText: {
-    color: colors.streak,
-    fontWeight: '800',
     fontSize: fontSize.sm,
-  },
-  subtitle: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-    fontWeight: '600',
   },
   grid: {
     flexDirection: 'row',
@@ -90,35 +89,16 @@ const styles = StyleSheet.create({
   },
   weekday: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  weekdayToday: {
-    color: colors.streak,
   },
   dayDot: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: radius.full,
-    backgroundColor: colors.surfaceLight,
     borderWidth: 2,
-    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dayActive: {
-    backgroundColor: colors.streak + '33',
-    borderColor: colors.streak,
-  },
-  dayToday: {
-    borderColor: colors.primary,
-  },
   dayNum: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  dayNumActive: {
-    fontSize: 14,
+    fontSize: 12,
   },
 });

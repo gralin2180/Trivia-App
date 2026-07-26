@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
-import { colors, radius } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type ProgressBarProps = {
   progress: number;
@@ -15,12 +15,14 @@ type ProgressBarProps = {
 export function ProgressBar({
   progress,
   height = 12,
-  color = colors.primary,
+  color,
   gradient,
   style,
 }: ProgressBarProps) {
+  const { colors } = useTheme();
   const animated = useRef(new Animated.Value(0)).current;
   const clamped = Math.max(0, Math.min(progress, 1));
+  const fillColor = color ?? colors.primary;
 
   useEffect(() => {
     Animated.spring(animated, {
@@ -37,7 +39,13 @@ export function ProgressBar({
   });
 
   return (
-    <View style={[styles.track, { height, borderRadius: height }, style]}>
+    <View
+      style={[
+        styles.track,
+        { height, borderRadius: height, backgroundColor: colors.surfaceHighlight },
+        style,
+      ]}
+    >
       <Animated.View style={[styles.fillWrap, { width, height, borderRadius: height }]}>
         {gradient ? (
           <LinearGradient
@@ -47,7 +55,7 @@ export function ProgressBar({
             style={[styles.fill, { borderRadius: height }]}
           />
         ) : (
-          <View style={[styles.fill, { backgroundColor: color, borderRadius: height }]} />
+          <View style={[styles.fill, { backgroundColor: fillColor, borderRadius: height }]} />
         )}
       </Animated.View>
     </View>
@@ -56,7 +64,6 @@ export function ProgressBar({
 
 const styles = StyleSheet.create({
   track: {
-    backgroundColor: colors.border,
     overflow: 'hidden',
     width: '100%',
   },

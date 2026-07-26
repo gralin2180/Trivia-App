@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontSize, radius, spacing } from '@/constants/theme';
+import { fonts, fontSize, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import type { Achievement } from '@/lib/gamification';
 
 type AchievementsRowProps = {
@@ -8,19 +9,40 @@ type AchievementsRowProps = {
 };
 
 export function AchievementsRow({ achievements }: AchievementsRowProps) {
+  const { colors } = useTheme();
   if (achievements.length === 0) return null;
 
+  const preview = achievements.slice(0, 6);
+
   return (
-    <View style={styles.wrap}>
-      <Text style={styles.title}>🏅 Badges</Text>
+    <View style={[styles.wrap, { borderTopColor: colors.border }]}>
+      <Text style={[styles.title, { color: colors.text, fontFamily: fonts.displayBold }]}>
+        Badges
+      </Text>
       <View style={styles.row}>
-        {achievements.map((item) => (
+        {preview.map((item) => (
           <View
             key={item.id}
-            style={[styles.badge, !item.unlocked && styles.locked]}
+            style={[
+              styles.badge,
+              {
+                backgroundColor: colors.surface,
+                borderColor: item.unlocked ? colors.xp + '66' : colors.border,
+                opacity: item.unlocked ? 1 : 0.55,
+              },
+            ]}
           >
             <Text style={styles.icon}>{item.unlocked ? item.icon : '🔒'}</Text>
-            <Text style={[styles.label, !item.unlocked && styles.labelLocked]} numberOfLines={2}>
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: item.unlocked ? colors.text : colors.textMuted,
+                  fontFamily: fonts.bodyBold,
+                },
+              ]}
+              numberOfLines={2}
+            >
               {item.label}
             </Text>
           </View>
@@ -33,10 +55,10 @@ export function AchievementsRow({ achievements }: AchievementsRowProps) {
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.sm,
+    borderTopWidth: 1,
+    paddingTop: spacing.md,
   },
   title: {
-    color: colors.text,
-    fontWeight: '800',
     fontSize: fontSize.md,
   },
   row: {
@@ -48,29 +70,18 @@ const styles = StyleSheet.create({
     width: '30%',
     minWidth: 96,
     flexGrow: 1,
-    backgroundColor: colors.surface,
     borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: colors.xp + '55',
+    borderWidth: 1,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     alignItems: 'center',
     gap: 4,
   },
-  locked: {
-    borderColor: colors.border,
-    opacity: 0.55,
-  },
   icon: {
     fontSize: 22,
   },
   label: {
-    color: colors.text,
     fontSize: 11,
-    fontWeight: '700',
     textAlign: 'center',
-  },
-  labelLocked: {
-    color: colors.textMuted,
   },
 });

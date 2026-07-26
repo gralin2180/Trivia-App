@@ -1,6 +1,7 @@
 import { StyleSheet, Text, TextInput, TextInputProps, View } from 'react-native';
 
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { fonts, fontSize, radius, spacing } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type InputProps = TextInputProps & {
   label: string;
@@ -8,68 +9,51 @@ type InputProps = TextInputProps & {
 };
 
 export function Input({ label, error, style, ...props }: InputProps) {
+  const { colors } = useTheme();
+
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textMuted, fontFamily: fonts.bodyMedium }]}>
+        {label}
+      </Text>
       <TextInput
-        placeholderTextColor={colors.textMuted}
-        style={[styles.input, error ? styles.inputError : null, style]}
+        placeholderTextColor={colors.textSecondary}
+        style={[
+          styles.input,
+          {
+            borderColor: error ? colors.error : colors.border,
+            backgroundColor: colors.surface,
+            color: colors.text,
+            fontFamily: fonts.body,
+          },
+          style,
+        ]}
         {...props}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.error, { color: colors.error, fontFamily: fonts.body }]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
-
   label: {
     fontSize: fontSize.sm,
-    fontWeight: "700",
-    color: colors.text,
-    marginLeft: 4,
-    letterSpacing: 0.3,
+    marginLeft: 2,
   },
-
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
-
-    backgroundColor: colors.surface,
-
-    borderRadius: 18,
-
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 16,
-
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
     fontSize: fontSize.md,
-    color: colors.text,
-
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-
-    elevation: 3,
   },
-
-  inputError: {
-    borderColor: colors.error,
-  },
-
   error: {
-    marginTop: 2,
-    marginLeft: 4,
-
-    color: colors.error,
-
+    marginLeft: 2,
     fontSize: fontSize.sm,
-    fontWeight: "600",
   },
 });

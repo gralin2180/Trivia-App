@@ -1,19 +1,23 @@
 {
   "expo": {
-    "name": "trivia-app",
+    "name": "ACUMEN",
     "slug": "trivia-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "triviaapp",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.triviaapp.learn",
+      "buildNumber": "1"
     },
     "android": {
+      "package": "com.triviaapp.learn",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0D1117",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -28,7 +32,14 @@
       "expo-splash-screen",
       "expo-web-browser",
       "expo-apple-authentication",
-      "expo-audio"
+      "expo-audio",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "color": "#2EE6C5"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

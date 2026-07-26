@@ -51,7 +51,7 @@ export default function QuizScreen() {
   const { user } = useAuth();
   const { deck, isLoading, error, reload } = useDeck(params.deckId);
   const { progress } = useProgress(user?.id);
-  const quiz = useQuiz(params.deckId, deck?.cards ?? [], user?.id);
+  const quiz = useQuiz(params.deckId, deck?.cards ?? [], user?.id, mode);
 
   const [hearts, setHearts] = useState(game.maxHearts);
   const [combo, setCombo] = useState(0);

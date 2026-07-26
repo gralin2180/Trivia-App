@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 
 type ScreenProps = {
   children: ReactNode;
@@ -12,8 +13,10 @@ type ScreenProps = {
 };
 
 export function Screen({ children, style, edges = ['bottom'] }: ScreenProps) {
+  const { colors } = useTheme();
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={edges}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={edges}>
       <View style={[styles.content, style]}>{children}</View>
     </SafeAreaView>
   );
@@ -22,7 +25,6 @@ export function Screen({ children, style, edges = ['bottom'] }: ScreenProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
   },
   content: {
     flex: 1,

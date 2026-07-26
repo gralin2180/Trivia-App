@@ -6,8 +6,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { Screen } from '@/components/ui/Screen';
+import { fonts, fontSize, spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
-import { colors, fontSize, spacing } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
 import { groupDecksByCategory } from '@/lib/decks';
 import { useDecks } from '@/hooks/useDecks';
 import { useProgress } from '@/hooks/useProgress';
@@ -15,6 +16,7 @@ import { useProgress } from '@/hooks/useProgress';
 export default function DecksScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const { colors } = useTheme();
   const { decks, isLoading, error, fromCache, reload } = useDecks();
   const { progress } = useProgress(user?.id);
   const grouped = groupDecksByCategory(decks);
@@ -45,8 +47,8 @@ export default function DecksScreen() {
     return (
       <Screen>
         <EmptyState
-          title="No decks found"
-          message="Generate your first deck from the Home tab!"
+          title="No decks yet"
+          message="Generate your first deck from Learn."
           actionLabel="Retry"
           onAction={reload}
         />
@@ -57,10 +59,15 @@ export default function DecksScreen() {
   return (
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={[styles.intro, { color: colors.textMuted, fontFamily: fonts.body }]}>
+          Your topics, ready to study or quiz.
+        </Text>
         <OfflineBanner visible={fromCache} />
         {categories.map((category) => (
           <View key={category} style={styles.section}>
-            <Text style={styles.categoryTitle}>📂 {category}</Text>
+            <Text style={[styles.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.bodyBold }]}>
+              {category.toUpperCase()}
+            </Text>
             <View style={styles.deckList}>
               {grouped[category].map((deck) => (
                 <DeckCard
@@ -88,21 +95,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    gap: spacing.md,
+    gap: spacing.lg,
     paddingBottom: 100,
   },
+  intro: {
+    fontSize: fontSize.md,
+    lineHeight: 22,
+  },
   section: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   categoryTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: spacing.xs,
+    fontSize: fontSize.xs,
+    letterSpacing: 1.2,
   },
   deckList: {
-    gap: spacing.md,
+    gap: spacing.sm,
   },
 });
