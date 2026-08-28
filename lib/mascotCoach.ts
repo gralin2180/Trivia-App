@@ -4,11 +4,14 @@ export type CoachTopic = {
   id: string;
   title: string;
   answer: string;
+  /** Followed when the tip is tapped as a chip, not just typed as a question. */
+  action?: CoachAction;
 };
 
 export type CoachAction =
   | { type: 'setTheme'; theme: VisualThemeId }
   | { type: 'openSettings' }
+  | { type: 'openApiKeys' }
   | { type: 'openQuests' }
   | { type: 'openRanks' }
   | { type: 'openLearn' };
@@ -54,6 +57,13 @@ export const COACH_TOPICS: CoachTopic[] = [
     title: 'Leaderboard?',
     answer:
       'Tap Ranks in the bottom menu for Top minds. Set a display name in Settings so you show up nicely.',
+  },
+  {
+    id: 'keys',
+    title: 'API keys?',
+    answer:
+      'Important one! Open Settings → AI API keys and paste your own Groq, OpenAI, or Gemini key. Without it you share a demo quota that runs dry fast; with it your decks generate on your own limit. Groq has a free tier and takes about a minute to set up.',
+    action: { type: 'openApiKeys' },
   },
   {
     id: 'guest',
@@ -186,6 +196,17 @@ export function answerCoachQuestion(input: string): CoachResult {
     };
   }
 
+  if (
+    /\bapi\b/.test(q) ||
+    /\bkeys?\b/.test(q) ||
+    includesAny(q, ['groq', 'openai', 'gemini', 'quota', 'rate limit', 'daily limit', 'ran out'])
+  ) {
+    return {
+      answer: COACH_TOPICS.find((t) => t.id === 'keys')!.answer,
+      action: { type: 'openApiKeys' },
+    };
+  }
+
   if (includesAny(q, ['quest', 'daily goal', 'mission', 'challenge'])) {
     return {
       answer: COACH_TOPICS.find((t) => t.id === 'quests')!.answer,
@@ -257,11 +278,11 @@ export function answerCoachQuestion(input: string): CoachResult {
   if (includesAny(q, ['help', 'stuck', 'confused', 'what can'])) {
     return {
       answer:
-        'I can switch themes, explain decks/quizzes, point you to Quests or Ranks, and walk you through streaks. What do you need?',
+        'I can switch themes, explain decks/quizzes, point you to Quests or Ranks, walk you through streaks, and set up your AI API key (that last one matters most — ask me about keys).',
     };
   }
 
   return {
-    answer: `Got it — “${input.trim()}”. Try asking about themes (light/dark/minimal), building a deck, quests, streaks, or ranks — or tap a tip below.`,
+    answer: `Got it — “${input.trim()}”. Try asking about API keys (important for generation), themes (light/dark/minimal), building a deck, quests, streaks, or ranks — or tap a tip below.`,
   };
 }

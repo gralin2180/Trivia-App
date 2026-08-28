@@ -23,8 +23,8 @@ export function useQuiz(
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (!deckId || !userId) {
-      setError('You must be signed in to take a quiz.');
+    if (!deckId) {
+      setError('Deck not found.');
       setPhase('loading');
       return;
     }
@@ -71,7 +71,7 @@ export function useQuiz(
   );
 
   const goNext = useCallback(async () => {
-    if (!deckId || !userId) return;
+    if (!deckId) return;
 
     const isLast = currentIndex >= questions.length - 1;
 
@@ -98,16 +98,18 @@ export function useQuiz(
         : answers;
 
     const finalScore = finalAnswers.filter((answer) => answer.isCorrect).length;
-    const result = await saveQuizAttempt(userId, deckId, finalScore, questions.length);
+    // Guests take the quiz locally; attempts are only persisted for real users.
+    if (userId) {
+      const result = await saveQuizAttempt(userId, deckId, finalScore, questions.length);
+      if (result.error) {
+        setError(result.error);
+      }
+    }
     void bumpQuestProgress('quiz');
     if (quizMode === 'timed') {
       void bumpQuestProgress('timed');
     }
     setIsSaving(false);
-
-    if (result.error) {
-      setError(result.error);
-    }
 
     setAnswers(finalAnswers);
     setPhase('results');

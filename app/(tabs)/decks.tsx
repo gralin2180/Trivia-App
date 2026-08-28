@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DeckCard } from '@/components/decks/DeckCard';
+import { GlobalDecks } from '@/components/decks/GlobalDecks';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
@@ -35,7 +36,7 @@ export default function DecksScreen() {
     );
   }
 
-  if (error) {
+  if (error && decks.length === 0) {
     return (
       <Screen>
         <ErrorState message={error} onRetry={reload} />
@@ -43,43 +44,55 @@ export default function DecksScreen() {
     );
   }
 
-  if (decks.length === 0) {
-    return (
-      <Screen>
-        <EmptyState
-          title="No decks yet"
-          message="Generate your first deck from Learn."
-          actionLabel="Retry"
-          onAction={reload}
-        />
-      </Screen>
-    );
-  }
-
   return (
     <Screen style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.intro, { color: colors.textMuted, fontFamily: fonts.body }]}>
-          Your topics, ready to study or quiz.
-        </Text>
         <OfflineBanner visible={fromCache} />
-        {categories.map((category) => (
-          <View key={category} style={styles.section}>
-            <Text style={[styles.categoryTitle, { color: colors.textSecondary, fontFamily: fonts.bodyBold }]}>
-              {category.toUpperCase()}
+
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.displayBold }]}>
+              My decks
             </Text>
-            <View style={styles.deckList}>
-              {grouped[category].map((deck) => (
-                <DeckCard
-                  key={deck.id}
-                  deck={deck}
-                  progress={getDeckProgress(deck.id)}
-                  onPress={() => router.push(`/deck/${deck.id}`)}
-                />
-              ))}
-            </View>
+            <Text style={[styles.sectionHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
+              Topics you generated
+            </Text>
           </View>
-        ))}
+
+          {decks.length === 0 ? (
+            <EmptyState
+              title="No decks yet"
+              message="Generate your first deck from Learn."
+              actionLabel="Retry"
+              onAction={reload}
+            />
+          ) : (
+            categories.map((category) => (
+              <View key={category} style={styles.categoryBlock}>
+                <Text
+                  style={[
+                    styles.categoryTitle,
+                    { color: colors.textSecondary, fontFamily: fonts.bodyBold },
+                  ]}
+                >
+                  {category.toUpperCase()}
+                </Text>
+                <View style={styles.deckList}>
+                  {grouped[category].map((deck) => (
+                    <DeckCard
+                      key={deck.id}
+                      deck={deck}
+                      progress={getDeckProgress(deck.id)}
+                      onPress={() => router.push(`/deck/${deck.id}`)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
+        <GlobalDecks limit={24} />
       </ScrollView>
     </Screen>
   );
@@ -97,14 +110,22 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
-    gap: spacing.lg,
+    gap: spacing.xl,
     paddingBottom: 100,
   },
-  intro: {
-    fontSize: fontSize.md,
-    lineHeight: 22,
-  },
   section: {
+    gap: spacing.md,
+  },
+  sectionHeader: {
+    gap: 2,
+  },
+  sectionTitle: {
+    fontSize: fontSize.lg,
+  },
+  sectionHint: {
+    fontSize: fontSize.xs,
+  },
+  categoryBlock: {
     gap: spacing.sm,
   },
   categoryTitle: {

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import type { AssistantId } from '@/constants/assistants';
 import type { VisualThemeId } from '@/constants/theme';
 
 const SOUND_ENABLED_KEY = 'sound_enabled';
@@ -14,6 +15,8 @@ const GUEST_MODE_KEY = 'guest_mode';
 const DISPLAY_NAME_KEY = 'display_name';
 const MASCOT_INTRO_KEY = 'mascot_intro_seen_v1';
 const MASCOT_POSITION_KEY = 'mascot_position_v1';
+const ASSISTANT_ID_KEY = 'assistant_id_v1';
+const VOICE_FEEDBACK_KEY = 'voice_feedback_enabled_v1';
 
 export async function loadSoundEnabled(): Promise<boolean> {
   const value = await AsyncStorage.getItem(SOUND_ENABLED_KEY);
@@ -153,4 +156,26 @@ export async function saveMascotPosition(pos: { x: number; y: number }): Promise
 /** Dev helper — clear intro so the guided tour runs again. */
 export async function resetMascotTutorial(): Promise<void> {
   await AsyncStorage.removeItem(MASCOT_INTRO_KEY);
+}
+
+export async function loadAssistantId(): Promise<AssistantId> {
+  const value = await AsyncStorage.getItem(ASSISTANT_ID_KEY);
+  if (value === 'cat' || value === 'dog' || value === 'icon' || value === 'robot') {
+    return value;
+  }
+  return 'cat';
+}
+
+export async function saveAssistantId(id: AssistantId): Promise<void> {
+  await AsyncStorage.setItem(ASSISTANT_ID_KEY, id);
+}
+
+export async function loadVoiceFeedbackEnabled(): Promise<boolean> {
+  const value = await AsyncStorage.getItem(VOICE_FEEDBACK_KEY);
+  if (value === null) return false;
+  return value === 'true';
+}
+
+export async function saveVoiceFeedbackEnabled(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(VOICE_FEEDBACK_KEY, String(enabled));
 }

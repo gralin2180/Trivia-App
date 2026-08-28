@@ -4,17 +4,22 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 
+import { ASSISTANTS, AssistantOptionPreview } from '@/components/mascot/AssistantAvatar';
 import { AuriCard } from '@/components/mascot/AuriCard';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
+import type { AssistantId } from '@/constants/assistants';
 import { brand } from '@/constants/brand';
 import { fonts, fontSize, radius, spacing, themeMeta, type VisualThemeId } from '@/constants/theme';
+import { useApiKeys } from '@/contexts/ApiKeysContext';
+import { useAssistant } from '@/contexts/AssistantContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMascot } from '@/contexts/MascotContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useProgress } from '@/hooks/useProgress';
 import { playSound } from '@/lib/sounds';
+import { speakFeedback } from '@/lib/voice';
 import {
   cancelStreakReminders,
   loadStreakRemindersEnabled,
@@ -107,17 +112,21 @@ export default function SettingsScreen() {
   const { user, isGuest, signOut } = useAuth();
   const { colors, themeId, setThemeId } = useTheme();
   const { openChat, startTutorial } = useMascot();
+  const { assistant, assistantId, setAssistantId } = useAssistant();
+  const { hasAnyKey, keyCount } = useApiKeys();
   const { progress } = useProgress(user?.id);
   const {
     soundEnabled,
     musicEnabled,
     hapticsEnabled,
+    voiceFeedbackEnabled,
     sfxVolume,
     musicVolume,
     displayName,
     setSoundEnabled,
     setMusicEnabled,
     setHapticsEnabled,
+    setVoiceFeedbackEnabled,
     setSfxVolume,
     setMusicVolume,
     setDisplayName,
@@ -174,10 +183,10 @@ export default function SettingsScreen() {
           <AuriCard mood="wave" size={54} />
           <View style={styles.auriText}>
             <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.bodyBold }]}>
-              Ask {brand.mascot.name}
+              Ask {assistant.name}
             </Text>
             <Text style={[styles.rowHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
-              {brand.mascot.tagline}
+              {assistant.id === 'cat' ? brand.mascot.tagline : 'Your study assistant'}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
@@ -193,14 +202,57 @@ export default function SettingsScreen() {
           <Ionicons name="map-outline" size={28} color={colors.primary} />
           <View style={styles.auriText}>
             <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.bodyBold }]}>
-              Replay Auri’s tour
+              Replay guided tour
             </Text>
             <Text style={[styles.rowHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
-              Watch her walk the screen and highlight the main spots
+              Walk the screen and highlight the main spots
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
         </Pressable>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.displayBold }]}>
+            AI assistant
+          </Text>
+          <Text style={[styles.sectionHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
+            Cat uses full Auri sprites. Dog, icon, and robot are placeholders for now.
+          </Text>
+          <View style={styles.assistantGrid}>
+            {ASSISTANTS.map((opt) => {
+              const active = assistantId === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  onPress={() => void setAssistantId(opt.id as AssistantId)}
+                  style={[
+                    styles.assistantOption,
+                    {
+                      borderColor: active ? colors.primary : colors.border,
+                      backgroundColor: active ? colors.glowPrimary : colors.surface,
+                    },
+                  ]}
+                >
+                  <AssistantOptionPreview id={opt.id} size={48} />
+                  <Text
+                    style={[styles.themeLabel, { color: colors.text, fontFamily: fonts.bodyBold }]}
+                  >
+                    {opt.label}
+                  </Text>
+                  <Text
+                    style={[styles.themeBlurb, { color: colors.textMuted, fontFamily: fonts.body }]}
+                    numberOfLines={2}
+                  >
+                    {opt.blurb}
+                  </Text>
+                  {active ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
+                  ) : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.displayBold }]}>
@@ -238,6 +290,16 @@ export default function SettingsScreen() {
             value={musicVolume}
             disabled={!musicEnabled}
             onChange={setMusicVolume}
+            colors={colors}
+          />
+          <SettingRow
+            label="Voice feedback"
+            hint="Spoken study notes and right/wrong cues (device TTS)"
+            value={voiceFeedbackEnabled}
+            onValueChange={(next) => {
+              setVoiceFeedbackEnabled(next);
+              if (next) void speakFeedback(`Hi, I'm ${assistant.name}. Voice feedback is on.`);
+            }}
             colors={colors}
           />
           <SettingRow
@@ -358,6 +420,42 @@ export default function SettingsScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.displayBold }]}>
+            AI models
+          </Text>
+          <Text style={[styles.sectionHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
+            Pick a free model (Nemotron, Gemma, …) or add your own OpenRouter / Groq key.
+          </Text>
+          <Pressable
+            onPress={() => router.push('/api-keys')}
+            style={[
+              styles.auriCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: hasAnyKey ? colors.primary : colors.border,
+              },
+            ]}
+          >
+            <Ionicons
+              name={hasAnyKey ? 'sparkles' : 'sparkles-outline'}
+              size={26}
+              color={hasAnyKey ? colors.primary : colors.textSecondary}
+            />
+            <View style={styles.auriText}>
+              <Text style={[styles.rowLabel, { color: colors.text, fontFamily: fonts.bodyBold }]}>
+                {hasAnyKey ? 'Manage models & keys' : 'Select AI model'}
+              </Text>
+              <Text style={[styles.rowHint, { color: colors.textMuted, fontFamily: fonts.body }]}>
+                {hasAnyKey
+                  ? `${keyCount} key${keyCount === 1 ? '' : 's'} active · stored on this device only`
+                  : 'No keys yet — you’re on the shared demo quota'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
+          </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: fonts.displayBold }]}>
             About
           </Text>
           <Text style={[styles.about, { color: colors.textMuted, fontFamily: fonts.body }]}>
@@ -440,6 +538,19 @@ const styles = StyleSheet.create({
   },
   themeLabel: { fontSize: fontSize.md },
   themeBlurb: { fontSize: fontSize.sm },
+  assistantGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  assistantOption: {
+    width: '47%',
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    padding: spacing.md,
+    gap: spacing.xs,
+    alignItems: 'flex-start',
+  },
   input: {
     borderWidth: 1,
     borderRadius: radius.md,

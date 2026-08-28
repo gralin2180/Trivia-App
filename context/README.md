@@ -10,6 +10,8 @@ so the agent loads the right notes without re-discovering everything.
 | `hosting-mvp.md` | Self-hosted AI API, tunnels, autostart, APK URL flow |
 | `architecture.md` | High-level stack and request paths |
 | `runbook.md` | Day-to-day commands for demos and debugging |
+| `deck-generation.md` | Scrapers, reuse library, generation quality |
+| `learning-ux.md` | Assistant picker, study flow, voice, revisions, weak points |
 
 Do **not** put secrets here (API keys, service role, ngrok authtoken).
 Those stay in `.env` / `python-api/.env` only.

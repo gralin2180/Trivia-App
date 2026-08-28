@@ -6,8 +6,11 @@ complete quests, grow a streak, and track mastery.
 
 Works on **web**, **iOS**, and **Android** from one codebase.
 
-Mascot: **Auri** — a session coach with a full-screen motivational check-in,
-progress summary, draggable in-app companion, contextual chat, and guided tour.
+Default assistant: **Auri** (cat) — session coach with greeting, chat, and tour.
+Settings also offer **dog / simple icon / robot** (placeholder art for now), plus
+optional **voice feedback** (device TTS). Study flow: bullet notes → questions →
+“got it right?” → optional quiz. Home nudges revision on the last topic and
+surfaces shuffled weak points (missed cards). Details: `context/learning-ux.md`.
 
 ## Current product experience
 
@@ -20,9 +23,11 @@ progress summary, draggable in-app companion, contextual chat, and guided tour.
    - rotating motivational copy
    - relevant streak, level, XP, daily goal, quiz, and continue-deck context
    - **Got it** → stats; **Let's learn** → main Learn screen
-4. Inside the app Auri floats freely, can be dragged, looks toward screen
-   center, blinks/grooms/waves, answers common questions, changes themes, and
-   can replay the UI spotlight tour.
+4. Inside the app the selected assistant floats freely, can be dragged, looks
+   toward screen center, answers common questions, changes themes, and can
+   replay the UI spotlight tour.
+5. Study sessions teach with bullets first, then self-check questions; home
+   offers “quiz yourself on last topic?” and random weak-point practice.
 
 The current shared demo is:
 <https://unexpired-estimator-clutter.ngrok-free.dev>
@@ -96,38 +101,32 @@ On Windows PowerShell, if `npm` is blocked, use `npm.cmd` / `npx.cmd`.
 Apple Sign In is shown only where the platform and configuration support it.
 Google/Apple OAuth providers and redirect URLs must be configured in Supabase.
 
-### Auri (mascot)
+### AI assistant (Auri + options)
 
-- Every app process launch starts with a centered, full-screen motivational
-  greeting and a personalized progress snapshot.
-- She floats **without a box** on the main app screens.
-- **Drag** her anywhere on the screen.
-- **Tap** her → she grows and opens an RPG-style dialogue box.
-- Her opening messages and suggested actions rotate so chat does not feel static.
-- In dark mode she suggests trying the light theme (and vice versa).
-- Her gaze uses dedicated head-and-eye sprites; the whole character is not tilted.
-- Replay tour anytime: **Profile → Settings gear → Replay Auri’s tour**.
+- Settings → **AI assistant**: cat (Auri sprites), dog / icon / robot (placeholders).
+- Optional **Voice feedback** speaks study notes and right/wrong cues.
+- Full-screen greeting + floating companion (drag / tap to chat).
+- Replay tour: **Profile → Settings → Replay guided tour**.
+- Full UX notes: `context/learning-ux.md`.
 
 ### Core loops
 
 | Flow | Steps |
 |------|--------|
-| Generate deck | Learn → type a topic → Build my deck |
-| Study | Open a deck → Study |
-| Quiz | Open a deck → Quiz |
+| Generate deck | Learn → topic → optional teach-style prompt → Build |
+| Study | Notes (bullets) → questions → got it right? → Ready for quiz? |
+| Quiz | Deck → Quiz (or post-study CTA / home revision) |
+| Revision | Home nudge for last studied topic (~36h) |
+| Weak points | Missed cards shuffled on home (not every login) |
 | Quests | Bottom tab **Quests** |
 | Ranks | Bottom tab **Ranks** |
-| Themes | Ask Auri “light” / “dark” / “minimal”, or Settings → Appearance |
+| Themes | Ask assistant or Settings → Appearance |
 | Guest paywall | As guest, generate 2 decks → soft subscribe prompt |
 
-### Reset Auri’s tour (dev)
+### Reset assistant tour (dev)
 
-In browser DevTools console (web), or by clearing AsyncStorage keys:
-
-- `mascot_intro_seen_v1`
-- `mascot_position_v1` (optional — resets her saved spot)
-
-Or use **Replay Auri’s tour** in Settings.
+Clear AsyncStorage keys `mascot_intro_seen_v1` / `mascot_position_v1`, or use
+**Replay guided tour** in Settings.
 
 ---
 
@@ -135,7 +134,7 @@ Or use **Replay Auri’s tour** in Settings.
 
 - Expo SDK 56, React Native 0.85, React 19, Expo Router, TypeScript
 - Supabase Auth + Postgres + Row Level Security
-- FastAPI AI service with Groq as the active provider and optional fallbacks
+- FastAPI AI service: OpenRouter free-model pool first, then Groq / Gemini / OpenAI
 - Supabase Edge Function fallback for deck generation
 - Expo Notifications for streak reminders
 - AsyncStorage for local guest state, settings, mascot position, and intro flags
@@ -165,10 +164,11 @@ Important request paths:
 | Learn screen | `app/(tabs)/index.tsx` |
 | Auth and guest state | `contexts/AuthContext.tsx` |
 | Progress aggregation | `hooks/useProgress.ts`, `lib/progress.ts` |
-| Auri state | `contexts/MascotContext.tsx` |
-| Auri full-screen greeting | `components/mascot/AuriWelcomeScreen.tsx` |
-| Auri floating/chat UI | `components/mascot/AuriFloating.tsx`, `AuriDialogue.tsx` |
-| Auri copy and stat selection | `lib/mascotCoach.ts` |
+| Assistant picker | `contexts/AssistantContext.tsx`, `constants/assistants.ts` |
+| Auri / mascot state | `contexts/MascotContext.tsx` |
+| Assistant UI | `components/mascot/AssistantAvatar.tsx`, `AuriFloating.tsx`, `AuriDialogue.tsx` |
+| Study / revision UX | `context/learning-ux.md`, `hooks/useStudySession.ts`, `lib/weakPoints.ts` |
+| Voice feedback | `lib/voice.ts` |
 | AI request and fallback | `lib/ai/generateDeck.ts` |
 | Runtime API URL | `lib/remoteConfig.ts` |
 | FastAPI application | `python-api/main.py` |
@@ -183,9 +183,10 @@ Deploy and set secrets in Supabase → Edge Functions → `generate-deck`:
 
 | Secret | Required |
 |--------|----------|
-| `GROQ_API_KEY` | Recommended (free tier) |
-| `GEMINI_API_KEY` | Optional fallback |
-| `OPENAI_API_KEY` | Optional fallback |
+| `OPENROUTER_API_KEY` | Recommended (free Nemotron / `openrouter/free` pool) |
+| `GROQ_API_KEY` | Fast fallback |
+| `GEMINI_API_KEY` | Optional parallel / fallback |
+| `OPENAI_API_KEY` | Optional paid fallback |
 
 ```bash
 npx supabase login
@@ -201,6 +202,7 @@ Create `python-api/.env` without committing it:
 SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=server-only-service-role-key
+OPENROUTER_API_KEY=sk-or-v1-your-free-key
 GROQ_API_KEY=your-provider-key
 NGROK_DOMAIN=your-reserved-domain.ngrok-free.dev
 TUNNEL_PROVIDER=ngrok

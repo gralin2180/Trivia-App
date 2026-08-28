@@ -124,7 +124,7 @@ def params_for(
 
     return DifficultyParams(
         target_level=3,
-        temperature=0.85,
+        temperature=0.65,
         bloom_focus="apply + analyze + evaluate (edge cases, protocols, mechanisms)",
         complexity="expert terminology; assume basics are known",
         ban_trivial=True,

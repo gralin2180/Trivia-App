@@ -15,12 +15,14 @@ import {
   loadMusicVolume,
   loadSfxVolume,
   loadSoundEnabled,
+  loadVoiceFeedbackEnabled,
   saveDisplayName,
   saveHapticsEnabled,
   saveMusicEnabled,
   saveMusicVolume,
   saveSfxVolume,
   saveSoundEnabled,
+  saveVoiceFeedbackEnabled,
 } from '@/lib/settings';
 import { setGlobalMusicEnabled, setGlobalMusicVolume } from '@/lib/music';
 import { setGlobalSfxVolume, setGlobalSoundEnabled } from '@/lib/sounds';
@@ -29,6 +31,7 @@ type SettingsContextValue = {
   soundEnabled: boolean;
   musicEnabled: boolean;
   hapticsEnabled: boolean;
+  voiceFeedbackEnabled: boolean;
   sfxVolume: number;
   musicVolume: number;
   displayName: string;
@@ -36,6 +39,7 @@ type SettingsContextValue = {
   setSoundEnabled: (enabled: boolean) => void;
   setMusicEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
+  setVoiceFeedbackEnabled: (enabled: boolean) => void;
   setSfxVolume: (volume: number) => void;
   setMusicVolume: (volume: number) => void;
   setDisplayName: (name: string) => Promise<void>;
@@ -50,6 +54,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [sfxVolume, setSfxVolumeState] = useState(0.8);
   const [musicVolume, setMusicVolumeState] = useState(0.35);
   const [displayName, setDisplayNameState] = useState('');
+  const [voiceFeedbackEnabled, setVoiceFeedbackEnabledState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -60,7 +65,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       loadSfxVolume(),
       loadMusicVolume(),
       loadDisplayName(),
-    ]).then(([sound, music, haptics, sfx, musicVol, name]) => {
+      loadVoiceFeedbackEnabled(),
+    ]).then(([sound, music, haptics, sfx, musicVol, name, voice]) => {
       setSoundEnabledState(sound);
       setGlobalSoundEnabled(sound);
       setMusicEnabledState(music);
@@ -71,6 +77,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setGlobalMusicEnabled(music);
       setHapticsEnabledState(haptics);
       setDisplayNameState(name ?? '');
+      setVoiceFeedbackEnabledState(voice);
       setIsLoading(false);
     });
   }, []);
@@ -90,6 +97,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const setHapticsEnabled = useCallback((enabled: boolean) => {
     setHapticsEnabledState(enabled);
     void saveHapticsEnabled(enabled);
+  }, []);
+
+  const setVoiceFeedbackEnabled = useCallback((enabled: boolean) => {
+    setVoiceFeedbackEnabledState(enabled);
+    void saveVoiceFeedbackEnabled(enabled);
   }, []);
 
   const setSfxVolume = useCallback((volume: number) => {
@@ -116,6 +128,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       soundEnabled,
       musicEnabled,
       hapticsEnabled,
+      voiceFeedbackEnabled,
       sfxVolume,
       musicVolume,
       displayName,
@@ -123,6 +136,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSoundEnabled,
       setMusicEnabled,
       setHapticsEnabled,
+      setVoiceFeedbackEnabled,
       setSfxVolume,
       setMusicVolume,
       setDisplayName,
@@ -131,6 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       soundEnabled,
       musicEnabled,
       hapticsEnabled,
+      voiceFeedbackEnabled,
       sfxVolume,
       musicVolume,
       displayName,
@@ -138,6 +153,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setSoundEnabled,
       setMusicEnabled,
       setHapticsEnabled,
+      setVoiceFeedbackEnabled,
       setSfxVolume,
       setMusicVolume,
       setDisplayName,

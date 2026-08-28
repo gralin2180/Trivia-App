@@ -25,6 +25,19 @@ Then: `Invoke-WebRequest <published-https-url>/health`
 3. Set `NGROK_DOMAIN=...` in `python-api/.env`
 4. Restart `start-server.ps1` — it publishes the new URL to Supabase automatically.
 
+## Rebuild web (demo site)
+
+After client UX changes (study flow, assistant picker, etc.):
+
+```bash
+npm run build:web
+```
+
+Supervisor serves `dist/` over the public tunnel. Hard-refresh the browser if
+you still see the old bundle.
+
+Study / assistant / revision behavior is documented in `context/learning-ux.md`.
+
 ## Rebuild APK after client changes
 
 Remote URL fetch is already in the app; rebuild only when you ship new app code:

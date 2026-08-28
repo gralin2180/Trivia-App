@@ -3,10 +3,11 @@ import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AuriMascot } from '@/components/mascot/AuriMascot';
+import { AssistantAvatar } from '@/components/mascot/AssistantAvatar';
 import { Button } from '@/components/ui/Button';
 import { brand } from '@/constants/brand';
 import { fonts, fontSize, spacing } from '@/constants/theme';
+import { useAssistant } from '@/contexts/AssistantContext';
 import { useMascot } from '@/contexts/MascotContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -18,6 +19,7 @@ export function AuriWelcomeScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { sessionGreeting, greetingStep, mood, advanceSessionGreeting } = useMascot();
+  const { assistant } = useAssistant();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
 
@@ -49,9 +51,10 @@ export function AuriWelcomeScreen() {
       <View style={[styles.glow, { backgroundColor: colors.glowPrimary }]} />
 
       <Animated.View style={[styles.stage, { opacity: fade, transform: [{ translateY: rise }] }]}>
-        <AuriMascot size={196} mood={mood} />
+        <AssistantAvatar size={196} mood={mood} />
         <Text style={[styles.name, { color: colors.primary, fontFamily: fonts.bodyMedium }]}>
-          {brand.mascot.name} · {brand.mascot.title}
+          {assistant.name}
+          {assistant.id === 'cat' ? ` · ${brand.mascot.title}` : ''}
         </Text>
 
         <Text style={[styles.title, { color: colors.text, fontFamily: fonts.display }]}>

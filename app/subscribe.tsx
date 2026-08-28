@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
-import { brand } from '@/constants/brand';
 import { fonts, fontSize, radius, spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -34,14 +33,14 @@ export default function SubscribeScreen() {
 
         <LinearGradient colors={[...colors.heroGradient]} style={styles.hero}>
           <Text style={[styles.kicker, { color: colors.primary, fontFamily: fonts.bodyBold }]}>
-            {brand.name} PLUS
+            KEEP LEARNING
           </Text>
           <Text style={[styles.title, { color: colors.text, fontFamily: fonts.display }]}>
-            You’ve used your free decks
+            You’ve used your {GUEST_FREE_DECK_LIMIT} free decks
           </Text>
           <Text style={[styles.subtitle, { color: colors.textMuted, fontFamily: fonts.body }]}>
-            Guests get {GUEST_FREE_DECK_LIMIT} deck generations to try ACUMEN. Create an account to keep
-            going — more topics, synced progress, full ranks.
+            Guests get {GUEST_FREE_DECK_LIMIT} AI deck generations to try ACUMEN. Create a free account
+            or sign in to keep going — more topics, synced progress, full ranks.
           </Text>
         </LinearGradient>
 

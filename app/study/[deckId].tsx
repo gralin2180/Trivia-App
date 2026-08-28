@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -10,14 +9,15 @@ import { Button } from '@/components/ui/Button';
 import { ConfettiOverlay } from '@/components/ui/ConfettiOverlay';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { Screen } from '@/components/ui/Screen';
-import { useAuth } from '@/contexts/AuthContext';
 import { colors, fontSize, gradients, radius, spacing } from '@/constants/theme';
-import { didLevelUp, getLevelInfo, getStudyXpEarned } from '@/lib/gamification';
+import { useAuth } from '@/contexts/AuthContext';
 import { difficultyLabel } from '@/lib/cards';
+import { didLevelUp, getLevelInfo, getStudyXpEarned } from '@/lib/gamification';
+import { playSound } from '@/lib/sounds';
+import { saveLastStudiedTopic } from '@/lib/weakPoints';
 import { useDeck } from '@/hooks/useDeck';
 import { useProgress } from '@/hooks/useProgress';
 import { useStudySession } from '@/hooks/useStudySession';
-import { playSound } from '@/lib/sounds';
 
 export default function StudyScreen() {
   const router = useRouter();
@@ -25,9 +25,18 @@ export default function StudyScreen() {
   const { user } = useAuth();
   const { deck, isLoading, error, reload } = useDeck(deckId);
   const { progress } = useProgress(user?.id);
-  const study = useStudySession(deckId, deck?.cards ?? [], user?.id);
+  const study = useStudySession(deckId, deck?.cards ?? [], user?.id, deck?.description);
 
-  if (isLoading || study.phase === 'loading') {
+  useEffect(() => {
+    if (study.phase !== 'complete' || !deck || !deckId) return;
+    void saveLastStudiedTopic({
+      deckId: String(deckId),
+      title: deck.title,
+      studiedAt: new Date().toISOString(),
+    });
+  }, [study.phase, deck, deckId]);
+
+  if (isLoading) {
     return (
       <Screen style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -51,15 +60,56 @@ export default function StudyScreen() {
     );
   }
 
+  if (study.phase === 'loading') {
+    return (
+      <Screen style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </Screen>
+    );
+  }
+
+  if (study.phase === 'notes') {
+    return (
+      <Screen style={styles.screen}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.notesKicker}>STUDY FIRST</Text>
+          <Text style={styles.notesTitle}>{deck.title}</Text>
+          <Text style={styles.notesHint}>
+            Read the key points below. When you’re ready, move on to questions and mark whether you
+            got each one right.
+          </Text>
+          <View style={styles.bulletList}>
+            {study.bullets.length === 0 ? (
+              <Text style={styles.bullet}>No notes for this deck — jump into questions.</Text>
+            ) : (
+              study.bullets.map((line, i) => (
+                <View key={`${i}-${line.slice(0, 24)}`} style={styles.bulletRow}>
+                  <Text style={styles.bulletDot}>•</Text>
+                  <Text style={styles.bullet}>{line}</Text>
+                </View>
+              ))
+            )}
+          </View>
+          <Button label="Start questions" onPress={study.beginQuestions} icon="🧠" />
+        </ScrollView>
+      </Screen>
+    );
+  }
+
   if (study.phase === 'complete') {
     return (
       <StudyCompleteView
+        deckId={String(deckId)}
         deckTitle={deck.title}
         correct={study.stats.correct}
         wrong={study.stats.wrong}
         xpBefore={progress.xp}
         onBack={() => router.back()}
         onReset={study.reset}
+        onQuiz={() => router.replace(`/quiz/${deckId}`)}
       />
     );
   }
@@ -76,7 +126,7 @@ export default function StudyScreen() {
         {study.currentCard ? (
           <View style={styles.difficultyBadge}>
             <Text style={styles.difficulty}>
-              ⚡ Level: {difficultyLabel(study.currentCard.difficulty)}
+              Level: {difficultyLabel(study.currentCard.difficulty)}
             </Text>
           </View>
         ) : null}
@@ -92,11 +142,12 @@ export default function StudyScreen() {
 
         {study.isFlipped ? (
           <View style={styles.actions}>
-            <Button label="Got it wrong" onPress={study.markWrong} variant="danger" icon="😅" />
-            <Button label="Got it right!" onPress={study.markCorrect} icon="🎯" />
+            <Text style={styles.instruction}>Did you get it right?</Text>
+            <Button label="Got it wrong" onPress={study.markWrong} variant="danger" />
+            <Button label="Got it right" onPress={study.markCorrect} />
           </View>
         ) : (
-          <Text style={styles.instruction}>👆 Flip the card to check your answer</Text>
+          <Text style={styles.instruction}>Flip the card, then say if you got it right</Text>
         )}
       </ScrollView>
     </Screen>
@@ -104,12 +155,14 @@ export default function StudyScreen() {
 }
 
 type StudyCompleteViewProps = {
+  deckId: string;
   deckTitle: string;
   correct: number;
   wrong: number;
   xpBefore: number;
   onBack: () => void;
   onReset: () => void;
+  onQuiz: () => void;
 };
 
 function StudyCompleteView({
@@ -119,6 +172,7 @@ function StudyCompleteView({
   xpBefore,
   onBack,
   onReset,
+  onQuiz,
 }: StudyCompleteViewProps) {
   const totalReviewed = correct + wrong;
   const xpEarned = getStudyXpEarned(totalReviewed);
@@ -140,10 +194,7 @@ function StudyCompleteView({
         contentContainerStyle={styles.completeScroll}
         showsVerticalScrollIndicator={false}
       >
-        <ConfettiOverlay
-          visible={confettiVisible}
-          onFinish={() => setConfettiVisible(false)}
-        />
+        <ConfettiOverlay visible={confettiVisible} onFinish={() => setConfettiVisible(false)} />
 
         <LinearGradient colors={[...gradients.hero]} style={styles.completeCard}>
           <Text style={styles.celebration}>{levelUp ? '⬆️' : '🎉'}</Text>
@@ -176,11 +227,16 @@ function StudyCompleteView({
           </View>
 
           <Text style={styles.note}>
-            Wrong cards were re-queued. Keep your streak alive! 🔥
+            Wrong cards were re-queued during study. Misses become weak points for later practice.
           </Text>
 
-          <Button label="Back to deck" onPress={onBack} icon="🏠" />
-          <Button label="Study again" onPress={onReset} variant="secondary" icon="🔄" />
+          <View style={styles.quizCta}>
+            <Text style={styles.quizPrompt}>Ready to take a quiz?</Text>
+            <Button label="Start quiz" onPress={onQuiz} />
+          </View>
+
+          <Button label="Back to deck" onPress={onBack} variant="secondary" />
+          <Button label="Study again" onPress={onReset} variant="secondary" />
         </LinearGradient>
       </ScrollView>
     </Screen>
@@ -200,6 +256,45 @@ const styles = StyleSheet.create({
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  notesKicker: {
+    fontSize: fontSize.xs,
+    fontWeight: '800',
+    color: colors.primary,
+    letterSpacing: 1.4,
+    marginTop: spacing.sm,
+  },
+  notesTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  notesHint: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  bulletList: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  bulletRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  bulletDot: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: '800',
+    lineHeight: 22,
+  },
+  bullet: {
+    flex: 1,
+    fontSize: fontSize.md,
+    color: colors.text,
+    lineHeight: 22,
+    fontWeight: '600',
   },
   difficultyBadge: {
     alignSelf: 'center',
@@ -322,6 +417,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.textMuted,
     lineHeight: 20,
+    textAlign: 'center',
+  },
+  quizCta: {
+    width: '100%',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  quizPrompt: {
+    fontSize: fontSize.md,
+    fontWeight: '800',
+    color: colors.text,
     textAlign: 'center',
   },
 });

@@ -135,7 +135,7 @@ export default function QuizScreen() {
     quiz,
   ]);
 
-  if (isLoading || quiz.phase === 'loading') {
+  if (isLoading) {
     return (
       <Screen style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -155,6 +155,14 @@ export default function QuizScreen() {
     return (
       <Screen>
         <ErrorState message={quiz.error} onRetry={reload} />
+      </Screen>
+    );
+  }
+
+  if (quiz.phase === 'loading') {
+    return (
+      <Screen style={styles.centered}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </Screen>
     );
   }

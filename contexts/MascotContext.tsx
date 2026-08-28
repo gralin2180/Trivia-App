@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { router } from 'expo-router';
 import { Dimensions } from 'react-native';
 
 import type { MascotMood } from '@/constants/auriSprites';
@@ -249,6 +250,8 @@ export function MascotProvider({ children }: { children: ReactNode }) {
       title: 'Auri',
       body: prompts[promptIndex],
       choices: [
+        // Keys unlock generation, so this stays pinned as the first tip.
+        { id: 'keys', label: 'API keys?' },
         firstChoice,
         themeSuggestion,
         { id: 'tour', label: 'Show me around' },
@@ -261,23 +264,41 @@ export function MascotProvider({ children }: { children: ReactNode }) {
   const askQuick = useCallback(
     (text: string) => {
       const topic = COACH_TOPICS.find((t) => t.id === text || t.title === text);
-      const result = topic ? { answer: topic.answer } : answerCoachQuestion(text);
+      const result = topic
+        ? { answer: topic.answer, action: topic.action }
+        : answerCoachQuestion(text);
 
       if (result.action?.type === 'setTheme') {
         setThemeId(result.action.theme);
       }
+
+      const goToKeys = result.action?.type === 'openApiKeys';
 
       setEnlarged(true);
       setMood('think');
       setDialogue({
         title: 'Auri',
         body: result.answer,
-        primaryLabel: 'Got it',
-        choices: [
-          { id: 'start', label: 'How do I start?' },
-          { id: 'theme', label: 'Themes' },
-          { id: 'tour', label: 'Tour again' },
-        ],
+        primaryLabel: goToKeys ? 'Take me there' : 'Got it',
+        onPrimary: goToKeys
+          ? () => {
+              setDialogue(null);
+              setEnlarged(false);
+              setMood('idle');
+              router.push('/api-keys');
+            }
+          : undefined,
+        choices: goToKeys
+          ? [
+              { id: 'start', label: 'How do I start?' },
+              { id: 'tour', label: 'Tour again' },
+            ]
+          : [
+              { id: 'keys', label: 'API keys?' },
+              { id: 'start', label: 'How do I start?' },
+              { id: 'theme', label: 'Themes' },
+              { id: 'tour', label: 'Tour again' },
+            ],
       });
       setTimeout(() => setMood('explain'), 650);
     },
@@ -363,8 +384,15 @@ export function MascotProvider({ children }: { children: ReactNode }) {
       setMood('cheer');
       setDialogue({
         title: 'You’re all set!',
-        body: 'Drag me anywhere. Tap me when you need a tip. I’ll be right here.',
-        primaryLabel: 'Thanks Auri',
+        body: 'Drag me anywhere. Tap me when you need a tip. One last nudge: add your AI API key in Settings so deck generation never stalls on the shared quota.',
+        primaryLabel: 'Add my key',
+        choices: [{ id: 'keys', label: 'Why do I need a key?' }],
+        onPrimary: () => {
+          setDialogue(null);
+          setEnlarged(false);
+          setMood('idle');
+          router.push('/api-keys');
+        },
       });
       setTimeout(() => setMood('proud'), 1700);
       return;

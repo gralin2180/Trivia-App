@@ -25,15 +25,47 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-export function buildQuizQuestions(cards: Card[]): QuizQuestion[] {
-  const allAnswers = cards.map((card) => card.back);
+/** Normalised comparison so “same answer, different spacing/case” counts as a dupe. */
+function answerKey(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase();
+}
 
+const FILLER_OPTIONS = [
+  'None of the other answers is correct.',
+  'This is not covered by the deck.',
+  'The opposite of the correct answer.',
+];
+
+export function buildQuizQuestions(cards: Card[]): QuizQuestion[] {
   return cards.map((card) => {
-    const wrongPool = allAnswers.filter((answer) => answer !== card.back);
+    // Dedupe the distractor pool — decks often contain repeated or
+    // near-identical answers, which used to surface as repeating options.
+    const seen = new Set<string>([answerKey(card.back)]);
+    const wrongPool: string[] = [];
+
+    const stored = (card.distractors ?? []).filter((opt) => answerKey(opt) !== answerKey(card.back));
+    for (const opt of stored) {
+      const key = answerKey(opt);
+      if (!seen.has(key)) {
+        seen.add(key);
+        wrongPool.push(opt);
+      }
+    }
+
+    for (const other of cards) {
+      const key = answerKey(other.back);
+      if (!seen.has(key)) {
+        seen.add(key);
+        wrongPool.push(other.back);
+      }
+    }
+
     const wrongOptions = shuffle(wrongPool).slice(0, 3);
 
-    while (wrongOptions.length < 3) {
-      wrongOptions.push(`Not: ${card.front.slice(0, 24)}`);
+    let fillerIndex = 0;
+    while (wrongOptions.length < 3 && fillerIndex < FILLER_OPTIONS.length) {
+      wrongOptions.push(FILLER_OPTIONS[fillerIndex]);
+      fillerIndex += 1;
     }
 
     const options = shuffle([card.back, ...wrongOptions.slice(0, 3)]);

@@ -1,7 +1,9 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AURI_FRAMES, MOOD_LABEL, type MascotMood } from '@/constants/auriSprites';
-import { fonts, radius } from '@/constants/theme';
+import { AssistantAvatar } from '@/components/mascot/AssistantAvatar';
+import type { MascotMood } from '@/components/mascot/AuriMascot';
+import { useAssistant } from '@/contexts/AssistantContext';
+import { fonts, fontSize } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
 
 type Props = {
@@ -10,38 +12,17 @@ type Props = {
   showLabel?: boolean;
 };
 
-/**
- * Passport-style face card — dedicated headshot, not a zoomed full-body sprite.
- */
+/** Compact assistant face for dialogue headers / settings. */
 export function AuriCard({ mood = 'idle', size = 56, showLabel = false }: Props) {
   const { colors } = useTheme();
+  const { assistant } = useAssistant();
 
   return (
-    <View style={{ alignItems: 'center', gap: 4 }}>
-      <View
-        style={[
-          styles.frame,
-          {
-            width: size,
-            height: size,
-            borderRadius: radius.md,
-            backgroundColor: colors.surfaceHighlight,
-            borderColor: colors.primary,
-          },
-        ]}
-      >
-        <Image
-          source={AURI_FRAMES.face}
-          resizeMode="cover"
-          style={{ width: size, height: size }}
-        />
-      </View>
+    <View style={styles.wrap}>
+      <AssistantAvatar size={size} mood={mood} quiet />
       {showLabel ? (
-        <Text
-          numberOfLines={1}
-          style={[styles.label, { color: colors.textMuted, fontFamily: fonts.body }]}
-        >
-          {MOOD_LABEL[mood]}
+        <Text style={[styles.label, { color: colors.textSecondary, fontFamily: fonts.bodyBold }]}>
+          {assistant.name}
         </Text>
       ) : null}
     </View>
@@ -49,13 +30,11 @@ export function AuriCard({ mood = 'idle', size = 56, showLabel = false }: Props)
 }
 
 const styles = StyleSheet.create({
-  frame: {
-    overflow: 'hidden',
-    borderWidth: 2,
+  wrap: {
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
   label: {
-    fontSize: 10,
+    fontSize: fontSize.xs,
   },
 });

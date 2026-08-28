@@ -1,7 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,15 +9,21 @@ import {
 } from 'react-native';
 
 import { OptionChip } from '@/components/generate/OptionChip';
+import { WaitGame } from '@/components/generate/WaitGame';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { colors, fontSize, spacing } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { generateDeckFromTopic } from '@/lib/ai/generateDeck';
-import { bumpGuestDeckGens, guestNeedsSubscription, GUEST_FREE_DECK_LIMIT } from '@/lib/guestLimits';
+import {
+  bumpGuestDeckGens,
+  guestGensRemaining,
+  guestNeedsSubscription,
+  GUEST_FREE_DECK_LIMIT,
+} from '@/lib/guestLimits';
 import { bumpQuestProgress } from '@/lib/quests';
 import { getSyllabusGap } from '@/lib/syllabusGaps';
 import type { DifficultyLevel, StudyMode } from '@/types/generate';
-import { useAuth } from '@/contexts/AuthContext';
 
 export default function GenerateSetupScreen() {
   const router = useRouter();
@@ -34,9 +39,19 @@ export default function GenerateSetupScreen() {
   const [mode, setMode] = useState<StudyMode>('study');
   const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium');
   const [customPrompt, setCustomPrompt] = useState(gap?.deckPrompt ?? '');
+  const [teachPrompt, setTeachPrompt] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [guestLeft, setGuestLeft] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isGuest) {
+      setGuestLeft(null);
+      return;
+    }
+    void guestGensRemaining().then(setGuestLeft);
+  }, [isGuest]);
 
   async function handleGenerate() {
     if (!topic) {
@@ -51,14 +66,21 @@ export default function GenerateSetupScreen() {
     }
 
     setIsLoading(true);
-    setMessage('Generating with AI pipeline (context + difficulty judge)... 10–30s.');
+    setMessage('Taking time to plan facts, then write cards. Hop while you wait.');
     setIsError(false);
+
+    const promptParts = [
+      customPrompt.trim(),
+      mode === 'study' && teachPrompt.trim()
+        ? `Teach style for study notes: ${teachPrompt.trim()}`
+        : '',
+    ].filter(Boolean);
 
     const result = await generateDeckFromTopic({
       topic,
       mode,
       difficulty,
-      customPrompt: customPrompt.trim() || undefined,
+      customPrompt: promptParts.length ? promptParts.join('\n\n') : undefined,
     });
 
     setIsLoading(false);
@@ -72,8 +94,11 @@ export default function GenerateSetupScreen() {
     void bumpQuestProgress('generate');
 
     let hitLimit = false;
-    if (isGuest) {
+    // Reused library decks are free — don't burn a guest generation.
+    if (isGuest && !result.reused) {
       const gens = await bumpGuestDeckGens();
+      const left = Math.max(0, GUEST_FREE_DECK_LIMIT - gens);
+      setGuestLeft(left);
       hitLimit = gens >= GUEST_FREE_DECK_LIMIT;
     }
 
@@ -84,7 +109,6 @@ export default function GenerateSetupScreen() {
     }
 
     if (hitLimit) {
-      // Let the deck open, then send guests to the plan page
       setTimeout(() => router.push('/subscribe'), 600);
     }
   }
@@ -96,6 +120,24 @@ export default function GenerateSetupScreen() {
           <Text style={styles.title}>Missing topic</Text>
           <Text style={styles.subtitle}>Go back to Home and enter what you want to learn.</Text>
           <Button label="Back to Home" onPress={() => router.back()} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <Screen style={styles.screen}>
+        <View style={styles.waitWrap}>
+          <Text style={styles.eyebrow}>STILL THINKING</Text>
+          <Text style={styles.topicTitle}>{gap?.title ?? topic}</Text>
+          <Text style={styles.subtitle}>
+            Planning facts, then writing questions. Tap the lane to hop while you wait.
+          </Text>
+          <WaitGame />
+          {message ? (
+            <Text style={[styles.message, isError && styles.errorText]}>{message}</Text>
+          ) : null}
         </View>
       </Screen>
     );
@@ -177,12 +219,38 @@ export default function GenerateSetupScreen() {
           />
         </View>
 
+        {mode === 'study' ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>4. How should the AI teach? (optional)</Text>
+            <Text style={styles.hint}>
+              Study mode shows bullet notes first. Tell the AI how to teach — tone, depth, examples.
+            </Text>
+            <TextInput
+              value={teachPrompt}
+              onChangeText={setTeachPrompt}
+              placeholder='e.g. "Use short bullets and real-world examples" or "Socratic — hint, don’t spoil"'
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+              style={styles.textArea}
+              editable={!isLoading}
+            />
+          </View>
+        ) : null}
+
         <Button
-          label={isLoading ? 'Generating...' : gap ? 'Build bridge deck' : 'Generate deck'}
+          label={gap ? 'Build bridge deck' : 'Generate deck'}
           onPress={handleGenerate}
         />
 
-        {isLoading ? <ActivityIndicator color={colors.primary} /> : null}
+        {isGuest && guestLeft != null ? (
+          <Text style={styles.guestQuota}>
+            {guestLeft === 0
+              ? 'Free guest decks used up — create an account to continue.'
+              : `${guestLeft} free guest deck${guestLeft === 1 ? '' : 's'} left`}
+          </Text>
+        ) : null}
+
         {message ? (
           <Text style={[styles.message, isError && styles.errorText]}>{message}</Text>
         ) : null}
@@ -271,8 +339,18 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
+  guestQuota: {
+    fontSize: fontSize.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
   errorText: {
     color: colors.error,
+  },
+  waitWrap: {
+    padding: spacing.md,
+    gap: spacing.md,
+    flex: 1,
   },
   title: {
     fontSize: fontSize.lg,

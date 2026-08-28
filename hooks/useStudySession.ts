@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { completeStudySession, recordCardReview, startStudySession } from '@/lib/study';
 import { sortCardsForStudy } from '@/lib/cards';
+import { cardsToStudyBullets } from '@/lib/studyNotes';
+import { completeStudySession, recordCardReview, startStudySession } from '@/lib/study';
+import { speakFeedback, stopSpeaking } from '@/lib/voice';
 import type { Card } from '@/types/database';
 
-type StudyPhase = 'loading' | 'studying' | 'complete';
+export type StudyPhase = 'loading' | 'notes' | 'studying' | 'complete';
 
 type StudyStats = {
   correct: number;
@@ -12,7 +14,12 @@ type StudyStats = {
   total: number;
 };
 
-export function useStudySession(deckId: string | undefined, cards: Card[], userId: string | undefined) {
+export function useStudySession(
+  deckId: string | undefined,
+  cards: Card[],
+  userId: string | undefined,
+  description?: string | null,
+) {
   const [phase, setPhase] = useState<StudyPhase>('loading');
   const [queue, setQueue] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,10 +28,11 @@ export function useStudySession(deckId: string | undefined, cards: Card[], userI
   const [stats, setStats] = useState<StudyStats>({ correct: 0, wrong: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [bullets, setBullets] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!deckId || !userId) {
-      setError('You must be signed in to study.');
+    if (!deckId) {
+      setError('Deck not found.');
       setPhase('loading');
       return;
     }
@@ -42,32 +50,49 @@ export function useStudySession(deckId: string | undefined, cards: Card[], userI
     async function init() {
       setPhase('loading');
       setError(null);
+      stopSpeaking();
 
-      const session = await startStudySession(activeUserId, activeDeckId);
+      let newSessionId: string | null = null;
+      if (activeUserId) {
+        const session = await startStudySession(activeUserId, activeDeckId);
+        if (cancelled) return;
+        newSessionId = session.sessionId;
+      }
       if (cancelled) return;
 
-      if (session.error || !session.sessionId) {
-        setError(session.error ?? 'Could not start study session.');
-        return;
-      }
-
-      setSessionId(session.sessionId);
+      setSessionId(newSessionId);
+      const studyBullets = cardsToStudyBullets(cards, description);
+      setBullets(studyBullets);
       setQueue(sortCardsForStudy(cards));
       setCurrentIndex(0);
       setIsFlipped(false);
       setStats({ correct: 0, wrong: 0, total: cards.length });
-      setPhase('studying');
+      setPhase('notes');
+
+      if (studyBullets.length > 0) {
+        void speakFeedback(`Study these points. ${studyBullets.slice(0, 4).join('. ')}`);
+      }
     }
 
-    init();
+    void init();
 
     return () => {
       cancelled = true;
+      stopSpeaking();
     };
-  }, [deckId, userId, cards]);
+  }, [deckId, userId, cards, description]);
 
   const currentCard = queue[currentIndex] ?? null;
-  const progressLabel = queue.length > 0 ? `${Math.min(currentIndex + 1, queue.length)} / ${queue.length}` : '0 / 0';
+  const progressLabel =
+    queue.length > 0 ? `${Math.min(currentIndex + 1, queue.length)} / ${queue.length}` : '0 / 0';
+
+  const beginQuestions = useCallback(() => {
+    stopSpeaking();
+    setPhase('studying');
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    void speakFeedback('Time for questions. Flip each card, then say if you got it right.');
+  }, []);
 
   const finishSession = useCallback(
     async (finalStats: StudyStats) => {
@@ -76,17 +101,25 @@ export function useStudySession(deckId: string | undefined, cards: Card[], userI
       }
       setStats(finalStats);
       setPhase('complete');
+      void speakFeedback(
+        `Session complete. You got ${finalStats.correct} right and missed ${finalStats.wrong}. Ready for a quiz?`,
+      );
     },
     [sessionId],
   );
 
   const answerCard = useCallback(
     async (wasCorrect: boolean) => {
-      if (!currentCard || !userId || isSaving) return;
+      if (!currentCard || isSaving || phase !== 'studying') return;
 
       setIsSaving(true);
+      stopSpeaking();
 
-      await recordCardReview(userId, currentCard.id, wasCorrect);
+      if (userId) {
+        await recordCardReview(userId, currentCard.id, wasCorrect);
+      }
+
+      void speakFeedback(wasCorrect ? 'Nice — you got it right.' : 'Okay — we will review that again.');
 
       const nextStats: StudyStats = {
         ...stats,
@@ -113,49 +146,71 @@ export function useStudySession(deckId: string | undefined, cards: Card[], userI
       setIsFlipped(false);
       setIsSaving(false);
     },
-    [currentCard, userId, isSaving, stats, currentIndex, queue.length, finishSession],
+    [currentCard, userId, isSaving, stats, currentIndex, queue, finishSession, phase],
   );
 
   const flipCard = useCallback(() => {
-    if (phase === 'studying' && currentCard) {
-      setIsFlipped((prev) => !prev);
-    }
+    if (phase !== 'studying' || !currentCard) return;
+    setIsFlipped((prev) => {
+      const next = !prev;
+      if (next) {
+        void speakFeedback(`Question: ${currentCard.front}. The answer is: ${currentCard.back}`);
+      }
+      return next;
+    });
   }, [phase, currentCard]);
 
   const restart = useCallback(async () => {
-    if (!deckId || !userId || cards.length === 0) return;
+    if (!deckId || cards.length === 0) return;
 
     setPhase('loading');
     setError(null);
+    stopSpeaking();
 
-    const session = await startStudySession(userId, deckId);
-    if (session.error || !session.sessionId) {
-      setError(session.error ?? 'Could not start study session.');
-      return;
+    let newSessionId: string | null = null;
+    if (userId) {
+      const session = await startStudySession(userId, deckId);
+      newSessionId = session.sessionId;
     }
-
-    setSessionId(session.sessionId);
+    setSessionId(newSessionId);
+      const studyBullets = cardsToStudyBullets(cards, description);
+    setBullets(studyBullets);
     setQueue(sortCardsForStudy(cards));
     setCurrentIndex(0);
     setIsFlipped(false);
     setStats({ correct: 0, wrong: 0, total: cards.length });
-    setPhase('studying');
-  }, [deckId, userId, cards]);
+    setPhase('notes');
+  }, [deckId, userId, cards, description]);
 
   return useMemo(
     () => ({
       phase,
+      bullets,
       currentCard,
       isFlipped,
       progressLabel,
       stats,
       error,
       isSaving,
+      beginQuestions,
       flipCard,
       markCorrect: () => answerCard(true),
       markWrong: () => answerCard(false),
       reset: restart,
     }),
-    [phase, currentCard, isFlipped, progressLabel, stats, error, isSaving, flipCard, answerCard, restart],
+    [
+      phase,
+      bullets,
+      currentCard,
+      isFlipped,
+      progressLabel,
+      stats,
+      error,
+      isSaving,
+      beginQuestions,
+      flipCard,
+      answerCard,
+      restart,
+    ],
   );
 }

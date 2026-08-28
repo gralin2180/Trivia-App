@@ -2,6 +2,7 @@ import 'react-native-url-polyfill/auto';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 import { config } from '@/constants/config';
 
@@ -10,7 +11,8 @@ const authOptions = {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // Web OAuth often returns #access_token on the Site URL — pick it up.
+    detectSessionInUrl: Platform.OS === 'web',
   },
 };
 

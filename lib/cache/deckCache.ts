@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { DeckDetail, DeckWithCardCount } from '@/types/database';
 
-const DECK_LIST_KEY = 'trivia:decks:list';
+// Deck lists are cached per owner so switching accounts on one device never
+// shows the previous user's decks.
+const deckListKey = (ownerScope: string) => `trivia:decks:list:${ownerScope}`;
 const deckKey = (deckId: string) => `trivia:deck:${deckId}`;
 
 type CachedDeckList = {
@@ -15,16 +17,16 @@ type CachedDeckDetail = {
   deck: DeckDetail;
 };
 
-export async function saveDecksToCache(decks: DeckWithCardCount[]) {
+export async function saveDecksToCache(decks: DeckWithCardCount[], ownerScope: string) {
   const payload: CachedDeckList = {
     savedAt: new Date().toISOString(),
     decks,
   };
-  await AsyncStorage.setItem(DECK_LIST_KEY, JSON.stringify(payload));
+  await AsyncStorage.setItem(deckListKey(ownerScope), JSON.stringify(payload));
 }
 
-export async function loadDecksFromCache(): Promise<DeckWithCardCount[] | null> {
-  const raw = await AsyncStorage.getItem(DECK_LIST_KEY);
+export async function loadDecksFromCache(ownerScope: string): Promise<DeckWithCardCount[] | null> {
+  const raw = await AsyncStorage.getItem(deckListKey(ownerScope));
   if (!raw) return null;
 
   try {

@@ -3,9 +3,12 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { DeckCard } from '@/components/decks/DeckCard';
+import { ApiKeyPopup } from '@/components/home/ApiKeyPopup';
 import { ContinueLesson } from '@/components/home/ContinueLesson';
+import { RevisionNudge } from '@/components/home/RevisionNudge';
 import { SyllabusGapSection } from '@/components/home/SyllabusGapSection';
 import { TopicSearch } from '@/components/home/TopicSearch';
+import { WeakPointPractice } from '@/components/home/WeakPointPractice';
 import { WeakTopics } from '@/components/home/WeakTopics';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -81,7 +84,14 @@ export default function HomeScreen() {
         </LinearGradient>
 
         <View style={styles.main}>
+          <ApiKeyPopup />
+
           <TopicSearch />
+
+          <RevisionNudge
+            onQuiz={(id) => router.push(`/quiz/${id}`)}
+            onStudy={(id) => router.push(`/study/${id}`)}
+          />
 
           <SyllabusGapSection />
 
@@ -100,6 +110,11 @@ export default function HomeScreen() {
               onPress={() => router.push(`/deck/${progress.continueDeck!.deckId}`)}
             />
           ) : null}
+
+          <WeakPointPractice
+            userId={user?.id}
+            onOpenDeck={(deckId) => router.push(`/study/${deckId}`)}
+          />
 
           <WeakTopics
             decks={progress.weakDecks}

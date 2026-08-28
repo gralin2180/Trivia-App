@@ -14,6 +14,7 @@ import {
 import { AuriCard } from '@/components/mascot/AuriCard';
 import { brand } from '@/constants/brand';
 import { fonts, fontSize, radius, spacing } from '@/constants/theme';
+import { useAssistant } from '@/contexts/AssistantContext';
 import { useMascot } from '@/contexts/MascotContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -35,6 +36,7 @@ export function AuriDialogue() {
     askQuick,
     startTutorial,
   } = useMascot();
+  const { assistant } = useAssistant();
 
   const opacity = useRef(new Animated.Value(0)).current;
   const slide = useRef(new Animated.Value(10)).current;
@@ -141,10 +143,10 @@ export function AuriDialogue() {
           <AuriCard mood={mood} size={54} />
           <View style={styles.headerText}>
             <Text style={[styles.name, { color: colors.text, fontFamily: fonts.displayBold }]}>
-              {dialogue.title || brand.mascot.name}
+              {dialogue.title || assistant.name}
             </Text>
             <Text style={[styles.role, { color: colors.primary, fontFamily: fonts.bodyMedium }]}>
-              {brand.mascot.title}
+              {assistant.id === 'cat' ? brand.mascot.title : 'Your study assistant'}
             </Text>
           </View>
           <Pressable

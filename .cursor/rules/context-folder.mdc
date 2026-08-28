@@ -10,6 +10,8 @@ Long-lived facts live in `context/` so chats do not need to rediscover them.
 - Before re-investigating hosting, tunnels, or APK ↔ API wiring, read `context/hosting-mvp.md`.
 - For stack / request paths, read `context/architecture.md`.
 - For day-to-day demo commands, read `context/runbook.md`.
+- For deck generation / scrapers / reuse library, read `context/deck-generation.md`.
+- For study flow, assistant picker, voice feedback, revisions, weak points, read `context/learning-ux.md`.
 
 When you learn a durable fact (how hosting works, a non-obvious bugfix, env layout),
 update the matching file under `context/` instead of only saying it in chat.

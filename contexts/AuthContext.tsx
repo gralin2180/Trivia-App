@@ -167,16 +167,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               (resolve) =>
                 setTimeout(
                   () => resolve({ data: { session: null }, error: { message: 'timeout' } }),
-                  2000,
+                  4000,
                 ),
             );
             const result = (await Promise.race([anon, timeout])) as {
               data: { session: Session | null };
               error: { message: string } | null;
             };
-            if (!result.error && result.data.session) {
-              setIsGuest(false);
-              await saveGuestMode(false);
+            // Keep guest mode even if anonymous auth succeeds — free-gen limits still apply.
+            if (result.error || !result.data.session) {
+              // Local guest + X-Acumen-Guest-Id path still works for generation.
             }
           } catch {
             // stay as local guest

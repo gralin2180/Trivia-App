@@ -9,7 +9,8 @@ export type TutorialAnchor =
   | 'tabDecks'
   | 'tabQuests'
   | 'tabRanks'
-  | 'tabProfile';
+  | 'tabProfile'
+  | 'apiKeys';
 
 export type TutorialStep = {
   id: string;
@@ -70,6 +71,13 @@ export const AURI_TUTORIAL: TutorialStep[] = [
     title: 'Profile & settings',
     body: 'Badges, stats, and the gear for themes, sound, and reminders. Tap me anytime if you’re stuck!',
   },
+  {
+    id: 'apiKeys',
+    anchor: 'apiKeys',
+    mood: 'explain',
+    title: 'Add your API key — important',
+    body: 'This is the one thing to do first: Profile → gear → AI API keys. Paste a free Groq key and every deck generates on your own quota instead of the shared demo limit that runs dry. Ask me about keys any time.',
+  },
 ];
 
 export type SpotlightRect = {
@@ -100,6 +108,9 @@ export function rectForAnchor(anchor: TutorialAnchor): SpotlightRect {
     case 'tabRanks':
       return { x: tabW * 3 + 4, y: tabY, width: tabW - 8, height: tabH - 8 };
     case 'tabProfile':
+      return { x: tabW * 4 + 4, y: tabY, width: tabW - 8, height: tabH - 8 };
+    // The keys live behind Profile → gear, so spotlight the Profile tab again.
+    case 'apiKeys':
       return { x: tabW * 4 + 4, y: tabY, width: tabW - 8, height: tabH - 8 };
     default:
       return { x: W / 2 - 40, y: H / 2 - 40, width: 80, height: 80 };

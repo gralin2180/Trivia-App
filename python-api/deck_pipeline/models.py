@@ -16,6 +16,7 @@ class Card:
     quality_score: float = 0.0
     bloom_level: str = "remember"  # remember | understand | apply | analyze | evaluate
     source_hint: str = ""
+    distractors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -44,6 +45,10 @@ class GenerationRequest:
     card_count: int = 10
     player_elo: float | None = None
     use_web_context: bool = True
+    # Questions this learner already saw recently (correct) — generator must not repeat them.
+    avoid_questions: list[str] = field(default_factory=list)
+    # Questions they got wrong — prefer including these again for practice.
+    retry_questions: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -54,6 +59,8 @@ class GenerationResult:
     context_source: str = "none"
     retries: int = 0
     judge_passed: bool = False
+    study_notes: list[str] = field(default_factory=list)
+    llm_route: str = ""
     params: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -64,6 +71,8 @@ class GenerationResult:
             "context_source": self.context_source,
             "retries": self.retries,
             "judge_passed": self.judge_passed,
+            "study_notes": self.study_notes,
+            "llm_route": self.llm_route,
             "params": self.params,
             "card_count": len(self.cards),
         }

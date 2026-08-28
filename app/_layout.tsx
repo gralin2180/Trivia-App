@@ -7,6 +7,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { MascotHost } from '@/components/mascot/MascotHost';
 import { LoadingScreen } from '@/components/ui/LoadingScreen';
+import { ApiKeysProvider } from '@/contexts/ApiKeysContext';
+import { AssistantProvider } from '@/contexts/AssistantContext';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { MascotProvider } from '@/contexts/MascotContext';
 import { SettingsProvider } from '@/contexts/SettingsContext';
@@ -30,6 +32,10 @@ function RootLayoutNav() {
     void scheduleStreakReminders();
   }, [canUseApp, user?.id]);
 
+  const currentRoot = segments[0] as string | undefined;
+  // Study and quiz are focus modes — no floating cat over the cards.
+  const focusMode = currentRoot === 'study' || currentRoot === 'quiz';
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -49,6 +55,7 @@ function RootLayoutNav() {
       root === 'badges' ||
       root === 'leaderboard' ||
       root === 'settings' ||
+      root === 'api-keys' ||
       root === 'subscribe';
 
     if (!canUseApp && inProtectedArea) {
@@ -95,9 +102,10 @@ function RootLayoutNav() {
         <Stack.Screen name="badges" />
         <Stack.Screen name="leaderboard" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="api-keys" />
         <Stack.Screen name="subscribe" />
       </Stack>
-      <MascotHost />
+      <MascotHost hidden={focusMode} />
     </View>
   );
 }
@@ -119,9 +127,13 @@ export default function RootLayout() {
         <ThemeProvider>
           <FontGate>
             <AuthProvider>
-              <MascotProvider>
-                <RootLayoutNav />
-              </MascotProvider>
+              <ApiKeysProvider>
+                <AssistantProvider>
+                  <MascotProvider>
+                    <RootLayoutNav />
+                  </MascotProvider>
+                </AssistantProvider>
+              </ApiKeysProvider>
             </AuthProvider>
           </FontGate>
         </ThemeProvider>

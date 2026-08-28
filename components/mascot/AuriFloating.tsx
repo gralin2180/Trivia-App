@@ -8,8 +8,9 @@ import {
   View,
 } from 'react-native';
 
-import { AuriMascot, type GazeDir } from '@/components/mascot/AuriMascot';
-import { brand } from '@/constants/brand';
+import { AssistantAvatar } from '@/components/mascot/AssistantAvatar';
+import type { GazeDir } from '@/components/mascot/AuriMascot';
+import { useAssistant } from '@/contexts/AssistantContext';
 import { MASCOT_SIZE_BIG, useMascot } from '@/contexts/MascotContext';
 
 /** Free-floating Auri — drag anywhere, tap to chat. No frame. */
@@ -26,6 +27,7 @@ export function AuriFloating() {
     toggleEnlarge,
     setUserDragging,
   } = useMascot();
+  const { assistant } = useAssistant();
 
   const pan = useRef(new Animated.ValueXY(position)).current;
   const grab = useRef(new Animated.Value(0)).current;
@@ -144,11 +146,11 @@ export function AuriFloating() {
       <Animated.View style={{ flex: 1, transform: [{ scale: grabScale }] }}>
         <Pressable
           onPress={onTap}
-          accessibilityLabel={`${brand.mascot.name}, drag to move, tap to talk`}
+          accessibilityLabel={`${assistant.name}, drag to move, tap to talk`}
           style={styles.hit}
         >
           <View pointerEvents="none">
-            <AuriMascot size={mascotSize} mood={mood} gaze={gaze} />
+            <AssistantAvatar size={mascotSize} mood={mood} gaze={gaze} />
           </View>
         </Pressable>
       </Animated.View>

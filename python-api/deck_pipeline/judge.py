@@ -7,7 +7,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-from .generate import llm_json
+from .llm import llm_json
 from .models import Card, DifficultyLevel
 from .prompts import judge_system_prompt, judge_user_prompt
 
@@ -42,17 +42,19 @@ def heuristic_fail(cards: list[Card], difficulty: DifficultyLevel) -> JudgeResul
         return None
 
     too_basic = sum(1 for c in cards if heuristic_too_basic(c))
-    ai_easy = sum(1 for c in cards if c.difficulty <= 1)
+    # Models often mis-label difficulty=1 even on decent content — only count
+    # self-tags alongside truly trivial fronts, not as a hard fail alone.
+    majority = max(1, len(cards) // 2)
 
-    if difficulty == "hard" and (too_basic >= 2 or ai_easy > 4):
+    if difficulty == "hard" and too_basic >= majority:
         return JudgeResult(
             passed=False,
             avg_quality=3.0,
-            critique=f"Heuristic fail: {too_basic} trivial cards, {ai_easy} marked easy.",
+            critique=f"Heuristic fail: {too_basic}/{len(cards)} trivial cards.",
             too_easy_count=too_basic,
         )
 
-    if difficulty == "medium" and (too_basic >= 4 or ai_easy > 6):
+    if difficulty == "medium" and too_basic >= max(4, majority):
         return JudgeResult(
             passed=False,
             avg_quality=4.0,
@@ -76,7 +78,8 @@ async def judge_cards(topic: str, difficulty: DifficultyLevel, cards: list[Card]
         payload = await llm_json(
             judge_system_prompt(),
             judge_user_prompt(topic, difficulty, cards_json),
-            temperature=0.2,
+            0.2,
+            role="judge",
         )
         scores = payload.get("card_scores") or []
         avg = float(payload.get("avg_quality") or 0)
@@ -92,16 +95,21 @@ async def judge_cards(topic: str, difficulty: DifficultyLevel, cards: list[Card]
                     pass
 
         passed = bool(payload.get("pass"))
-        if difficulty == "hard" and avg < 7.0:
+        too_easy = int(payload.get("too_easy_count") or 0)
+        # Soft thresholds — hard should not brick usable decks from small models.
+        if difficulty == "hard" and avg < 6.0:
             passed = False
-        if difficulty == "medium" and avg < 6.0:
+        if difficulty == "medium" and avg < 5.5:
+            passed = False
+        # Majority-trivial still fails hard.
+        if difficulty == "hard" and too_easy >= max(1, len(cards) // 2 + 1):
             passed = False
 
         return JudgeResult(
             passed=passed,
             avg_quality=round(avg, 2),
             critique=str(payload.get("critique") or ""),
-            too_easy_count=int(payload.get("too_easy_count") or 0),
+            too_easy_count=too_easy,
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("LLM judge failed, using heuristics only: %s", exc)

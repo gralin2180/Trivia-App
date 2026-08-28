@@ -24,6 +24,7 @@ export type Card = {
   order_index: number;
   difficulty?: number;
   created_at: string;
+  distractors?: string[];
 };
 
 export type DeckWithCardCount = Deck & {

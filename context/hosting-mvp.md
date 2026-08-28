@@ -65,14 +65,35 @@ npm run build:web        # writes dist/
 
 If `dist/` is missing, the mount is skipped and the API still runs.
 
+**Ordering gotcha:** the static mount is decided once, at uvicorn startup, from
+`dist/index.html`. If the API is (re)started while `npm run build:web` is still
+writing `dist/`, the whole web + file mount is skipped for that process — the
+website and any APK download under `/` return **404** while `/health` is fine.
+Fix: finish the export, then restart the API (kill port 8000, rerun
+`scripts/start-server.ps1`).
+
 **Rebuild `dist/` after any app code change**, otherwise the website keeps
 serving the old bundle. The APK is unaffected by this.
 
 ### Web-only gotcha: OAuth redirects
 
-Google/Apple sign-in from the website needs the tunnel URL added in Supabase →
-Authentication → URL Configuration, e.g.
-`https://unexpired-estimator-clutter.ngrok-free.dev/auth/callback`.
+Google/Apple sign-in from the website needs the **live tunnel** in Supabase →
+Authentication → URL Configuration. Old tunnels (`*.loca.lt`, random Cloudflare)
+break login with `503 Tunnel Unavailable` after Google succeeds.
+
+Set these (project `rfzkejayduahibfifwxq`):
+
+| Field | Value |
+|-------|--------|
+| **Site URL** | `https://unexpired-estimator-clutter.ngrok-free.dev` |
+| **Redirect URLs** | `https://unexpired-estimator-clutter.ngrok-free.dev/**` |
+| | `https://unexpired-estimator-clutter.ngrok-free.dev/auth/callback` |
+| | `triviaapp://auth/callback` (APK) |
+| | `http://localhost:8081/auth/callback` (local web) |
+
+Dashboard: https://supabase.com/dashboard/project/rfzkejayduahibfifwxq/auth/url-configuration
+
+Always open the app at the ngrok URL above — never an old `loca.lt` bookmark.
 Email sign-in works without this.
 
 ## Auth

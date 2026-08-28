@@ -30,7 +30,12 @@ export default function AuthCallbackScreen() {
     let failTimer: ReturnType<typeof setTimeout> | undefined;
 
     async function finishAuth(href: string) {
-      if (handledRef.current || cancelled || !href.includes('auth/callback')) {
+      // Accept both /auth/callback and Site-URL root landings with tokens in the hash.
+      const hasAuthPayload =
+        href.includes('auth/callback') ||
+        href.includes('access_token=') ||
+        href.includes('code=');
+      if (handledRef.current || cancelled || !hasAuthPayload) {
         return;
       }
       handledRef.current = true;

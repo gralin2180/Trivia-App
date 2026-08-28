@@ -120,16 +120,16 @@ function looksTooBasicForHard(card: NormalizedCard): boolean {
 function isDeckTooEasy(cards: NormalizedCard[], difficulty: DifficultyLevel): boolean {
   if (difficulty === 'easy' || cards.length < 4) return false;
 
+  const tooBasic = cards.filter(looksTooBasicForHard).length;
+  const majority = Math.max(1, Math.floor(cards.length / 2));
+
+  // Ignore AI self-tags of difficulty=1 — models mislabel often.
   if (difficulty === 'hard') {
-    const tooBasic = cards.filter(looksTooBasicForHard).length;
-    const aiMarkedEasy = cards.filter((card) => card.difficulty <= 1).length;
-    if (tooBasic >= 2 || aiMarkedEasy > 4) return true;
+    return tooBasic >= majority;
   }
 
   if (difficulty === 'medium') {
-    const tooBasic = cards.filter(looksTooBasicForHard).length;
-    const aiMarkedEasy = cards.filter((card) => card.difficulty <= 1).length;
-    if (tooBasic >= 4 || aiMarkedEasy > 6) return true;
+    return tooBasic >= Math.max(4, majority);
   }
 
   return false;
@@ -147,37 +147,89 @@ function friendlyAiError(message: string): string {
   return message.slice(0, 400);
 }
 
+async function generateCardsWithOpenRouter(
+  apiKey: string,
+  systemPrompt: string,
+  userPrompt: string,
+  temperature: number,
+): Promise<string> {
+  const models = [
+    'nvidia/nemotron-3.5-lightning:free',
+    'nvidia/nemotron-3-nano-30b-a3b:free',
+    'openrouter/free',
+  ];
+  let lastError = 'OpenRouter request failed.';
+
+  for (const model of models) {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/gralin2180/Trivia-App',
+        'X-Title': 'ACUMEN',
+      },
+      body: JSON.stringify({
+        model,
+        temperature,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      lastError = await response.text();
+      continue;
+    }
+    const completion = await response.json();
+    const content = completion.choices?.[0]?.message?.content;
+    if (content) return content;
+    lastError = 'OpenRouter returned an empty response.';
+  }
+
+  throw new Error(lastError);
+}
+
 async function generateCardsWithGroq(
   apiKey: string,
   systemPrompt: string,
   userPrompt: string,
   temperature: number,
 ): Promise<string> {
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'llama-3.1-8b-instant',
-      temperature,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-    }),
-  });
+  const models = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b', 'llama-3.3-70b-versatile'];
+  let lastError = 'Groq request failed.';
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+  for (const model of models) {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        temperature,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      lastError = await response.text();
+      continue;
+    }
+
+    const completion = await response.json();
+    const content = completion.choices?.[0]?.message?.content;
+    if (content) return content;
+    lastError = 'Groq returned an empty response.';
   }
 
-  const completion = await response.json();
-  const content = completion.choices?.[0]?.message?.content;
-  if (!content) throw new Error('Groq returned an empty response.');
-  return content;
+  throw new Error(lastError);
 }
 
 async function generateCardsWithGemini(
@@ -236,6 +288,7 @@ async function generateCards(
   userPrompt: string,
   temperature: number,
   keys: {
+    openrouter?: string;
     groq?: string;
     gemini?: string;
     openai?: string;
@@ -243,6 +296,12 @@ async function generateCards(
 ): Promise<string> {
   const attempts: Array<{ name: string; run: () => Promise<string> }> = [];
 
+  if (keys.openrouter) {
+    attempts.push({
+      name: 'OpenRouter',
+      run: () => generateCardsWithOpenRouter(keys.openrouter!, systemPrompt, userPrompt, temperature),
+    });
+  }
   if (keys.groq) {
     attempts.push({
       name: 'Groq',
@@ -325,15 +384,16 @@ Deno.serve(async (req) => {
     const groqKey = Deno.env.get('GROQ_API_KEY');
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
     const openAiKey = Deno.env.get('OPENAI_API_KEY');
+    const openRouterKey = Deno.env.get('OPENROUTER_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!groqKey && !geminiKey && !openAiKey) {
+    if (!groqKey && !geminiKey && !openAiKey && !openRouterKey) {
       return json(
         {
           error:
-            'No AI key configured. Add GROQ_API_KEY or GEMINI_API_KEY (both have free tiers) in Edge Function secrets.',
+            'No AI key configured. Add OPENROUTER_API_KEY (free models) or GROQ_API_KEY / GEMINI_API_KEY in Edge Function secrets.',
         },
         500,
       );
@@ -361,7 +421,12 @@ Deno.serve(async (req) => {
     const systemPrompt = buildSystemPrompt(safeDifficulty);
     const userPrompt = buildUserPrompt(trimmedTopic, safeDifficulty, safeCustomPrompt, safeMode);
     const temperature = safeDifficulty === 'hard' ? 0.85 : safeDifficulty === 'medium' ? 0.75 : 0.65;
-    const providerKeys = { groq: groqKey, gemini: geminiKey, openai: openAiKey };
+    const providerKeys = {
+      openrouter: openRouterKey,
+      groq: groqKey,
+      gemini: geminiKey,
+      openai: openAiKey,
+    };
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -399,16 +464,7 @@ Deno.serve(async (req) => {
       return json({ error: 'AI did not generate enough cards. Try again.' }, 502);
     }
 
-    if (isDeckTooEasy(cards, safeDifficulty)) {
-      return json(
-        {
-          error:
-            'AI kept generating beginner-level cards. Try a custom prompt like "medical school level" or try again.',
-        },
-        502,
-      );
-    }
-
+    // After retry, still ship the best cards we have rather than blocking hard mode.
     cards = enforceDifficulty(cards, safeDifficulty);
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);

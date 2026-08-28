@@ -39,7 +39,13 @@ export function getOAuthRedirectUri(): string {
     return `${scheme}://auth/callback`;
   }
 
-  // Web (localhost / HTTPS tunnel)
+  // Web: always return to the *current* origin (ngrok / localhost). Never bake in
+  // an old tunnel like loca.lt — if Supabase Site URL is stale, allow-list this
+  // exact callback so Auth does not fall back to Site URL.
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/auth/callback`;
+  }
+
   return makeRedirectUri({
     scheme,
     path: 'auth/callback',
@@ -134,6 +140,16 @@ async function waitForSession(timeoutMs = 4000): Promise<boolean> {
 async function signInWithOAuthBrowser(provider: SocialProvider): Promise<string | null> {
   const redirectTo = getOAuthRedirectUri();
 
+  // Web: full-page redirect back to the current tunnel origin. Avoid WebBrowser
+  // popups (and never rely on a stale Site URL like loca.lt).
+  if (Platform.OS === 'web') {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo },
+    });
+    return error ? mapOAuthError(error.message) : null;
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
@@ -150,21 +166,14 @@ async function signInWithOAuthBrowser(provider: SocialProvider): Promise<string 
     return 'Could not start sign in. Enable this provider in Supabase Auth.';
   }
 
-  const redirectPromise =
-    Platform.OS === 'android' || Platform.OS === 'ios'
-      ? waitForAuthRedirect(redirectTo)
-      : Promise.resolve(null);
+  const redirectPromise = waitForAuthRedirect(redirectTo);
 
   const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
     showInRecents: true,
   });
 
   const callbackUrl =
-    result.type === 'success'
-      ? result.url
-      : Platform.OS === 'android' || Platform.OS === 'ios'
-        ? await redirectPromise
-        : null;
+    result.type === 'success' ? result.url : await redirectPromise;
 
   if (callbackUrl) {
     return createSessionFromUrl(callbackUrl);

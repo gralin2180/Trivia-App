@@ -4,6 +4,8 @@ import {
   saveDeckDetailToCache,
   saveDecksToCache,
 } from '@/lib/cache/deckCache';
+import { decodeCardBack } from '@/lib/cardPayload';
+import { loadGuestDeckIds } from '@/lib/ownDecks';
 import { supabase } from '@/lib/supabase';
 import type { Card, Deck, DeckDetail, DeckWithCardCount } from '@/types/database';
 
@@ -28,20 +30,42 @@ function mapDeck(row: DeckRow): DeckWithCardCount {
   };
 }
 
+/**
+ * Decks are private: signed-in users only see decks they created, guests only
+ * see decks generated on this device. Nobody sees anyone else's topics.
+ */
 export async function fetchDecks(): Promise<FetchResult<DeckWithCardCount[]>> {
-  const { data, error } = await supabase
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const userId = session?.user?.id ?? null;
+  const ownerScope = userId ?? 'guest';
+
+  let query = supabase
     .from('decks')
     .select('id, title, description, category, created_at, cards(count)')
     .order('category', { ascending: true })
     .order('title', { ascending: true });
 
+  if (userId) {
+    query = query.eq('created_by', userId);
+  } else {
+    const guestDeckIds = await loadGuestDeckIds();
+    if (guestDeckIds.length === 0) {
+      return { data: [], error: null, fromCache: false };
+    }
+    query = query.in('id', guestDeckIds);
+  }
+
+  const { data, error } = await query;
+
   if (!error && data) {
     const decks = (data as DeckRow[]).map(mapDeck);
-    await saveDecksToCache(decks);
+    await saveDecksToCache(decks, ownerScope);
     return { data: decks, error: null, fromCache: false };
   }
 
-  const cached = await loadDecksFromCache();
+  const cached = await loadDecksFromCache(ownerScope);
   if (cached) {
     return {
       data: cached,
@@ -74,7 +98,14 @@ export async function fetchDeckById(deckId: string): Promise<FetchResult<DeckDet
     if (!cardsError && cards) {
       const detail: DeckDetail = {
         ...(deck as Deck),
-        cards: cards as Card[],
+        cards: (cards as Card[]).map((card) => {
+          const decoded = decodeCardBack(card.back);
+          return {
+            ...card,
+            back: decoded.answer,
+            distractors: decoded.distractors.length ? decoded.distractors : card.distractors,
+          };
+        }),
       };
       await saveDeckDetailToCache(detail);
       return { data: detail, error: null, fromCache: false };

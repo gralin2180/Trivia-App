@@ -10,14 +10,31 @@ import { useMascot } from '@/contexts/MascotContext';
 import { useProgress } from '@/hooks/useProgress';
 
 /** Floating Auri + welcome screen + dialogue + highlight tour. */
-export function MascotHost({ showCompanion = true }: { showCompanion?: boolean }) {
+export function MascotHost({
+  showCompanion = true,
+  hidden = false,
+}: {
+  showCompanion?: boolean;
+  /** Focus mode (study/quiz): Auri fully steps aside. */
+  hidden?: boolean;
+}) {
   const { canUseApp, user } = useAuth();
-  const { startSessionGreeting, isTutorial, isReady, isSessionGreeting } = useMascot();
+  const { startSessionGreeting, isTutorial, isReady, isSessionGreeting, closeDialogue, shrink } =
+    useMascot();
   const { progress, isLoading } = useProgress(user?.id);
   const greetedThisSession = useRef(false);
 
+  // Entering focus mode clears any open bubble so Auri never comes back in a
+  // stuck "talking" state that swallows the next tap.
   useEffect(() => {
-    if (!canUseApp || !isReady || isLoading || isTutorial || greetedThisSession.current) {
+    if (hidden) {
+      closeDialogue();
+      shrink();
+    }
+  }, [hidden, closeDialogue, shrink]);
+
+  useEffect(() => {
+    if (!canUseApp || !isReady || isLoading || isTutorial || hidden || greetedThisSession.current) {
       return;
     }
 
@@ -39,9 +56,9 @@ export function MascotHost({ showCompanion = true }: { showCompanion?: boolean }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [canUseApp, isReady, isLoading, isTutorial, progress, startSessionGreeting]);
+  }, [canUseApp, isReady, isLoading, isTutorial, hidden, progress, startSessionGreeting]);
 
-  if (!canUseApp) return null;
+  if (!canUseApp || hidden) return null;
 
   return (
     <View pointerEvents="box-none" style={StyleSheet.absoluteFill}>
